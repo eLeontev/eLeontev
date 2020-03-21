@@ -37,11 +37,13 @@ const setStaticFigures = (canvasCtx: CanvasRenderingContext2D) => {
     canvasCtx.stroke();
 };
 
-let angle = -180;
+let angle = 179;
+
 let pointerDirection = clockwise;
 
-const setButtonListener = (listener: () => void) => {
-    document.getElementById('button').addEventListener('click', listener);
+const setDocumentListener = (listener: () => void) => {
+    document.addEventListener('click', listener);
+    document.addEventListener('keydown', listener);
 };
 const drowPointer = (angle: number, canvasCtx: CanvasRenderingContext2D, usedColor: string, isForClear: boolean) => {
     const angleRad = getRadians(angle);
@@ -64,42 +66,41 @@ const cleanUpPreviosPointer = (canvasCtx: CanvasRenderingContext2D) => {
     canvasCtx.stroke();
 };
 
+const getUpdatedAngle = (updatedAngle: number, direction: number) => {
+    return direction === clockwise ? (updatedAngle <= 0 ? 360 : updatedAngle) : updatedAngle >= 360 ? 0 : updatedAngle;
+};
+
 const performPointerItaration = (canvasCtx: CanvasRenderingContext2D) => {
     cleanUpPreviosPointer(canvasCtx);
     setStaticFigures(canvasCtx);
     drowPointer(angle - pointerDirection, canvasCtx, 'white', true);
     drowPointer(angle, canvasCtx, 'blue', false);
-    angle = angle + pointerDirection;
+    angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
 };
 
 const calclulateEnemy = (angle: number) => {
     const minEnemyPosition = Math.abs(angle % 360) + minimumEnemyOffset;
     const maxEnemyPosition = minEnemyPosition + 360 - minimumEnemyOffset;
 
-    // const middlePointAngle = randomIntegerInRange(minimumEnemyOffset, maxEnemyPosition);
-    const middlePointAngle = 270 + 45;
+    const middlePointAngle = randomIntegerInRange(minimumEnemyOffset, maxEnemyPosition) % 360;
     const distanceFromMiddlePoint = randomIntegerInRange(innerRadius, radius * 0.9);
-    // const enemyRadius = randomIntegerInRange(innerRadius * 0.1, innerRadius * 0.4);
-    const enemyRadius = innerRadius * 0.4;
+    const enemyRadius = randomIntegerInRange(innerRadius * 0.1, innerRadius * 0.4);
 
     const angleRad = getRadians(middlePointAngle);
     const xPosition = distanceFromMiddlePoint * Math.sin(angleRad) + x;
     const yPosition = distanceFromMiddlePoint * Math.cos(angleRad) + y;
 
     const angleOffset = (Math.atan(enemyRadius / distanceFromMiddlePoint) * 180) / Math.PI;
-    const enemyAngleRange = [middlePointAngle - angleOffset, middlePointAngle + angleOffset];
 
-    console.log(Math.abs(angle))
-    drowPointer(middlePointAngle - angleOffset, ctx, 'green', false)
-    drowPointer(middlePointAngle, ctx, 'black', false)
-    drowPointer(middlePointAngle + angleOffset, ctx, 'yellow', false)
+    const min = middlePointAngle - angleOffset;
+    const max = middlePointAngle + angleOffset;
+
     return {
         xPosition,
         yPosition,
         enemyRadius,
-        enemyAngleRange,
         middlePointAngle,
-        angleOffset
+        enemyAngleRange: [min, max]
     };
 };
 
@@ -112,19 +113,18 @@ const drowEnemy = (angle: number, canvasCtx: CanvasRenderingContext2D) => {
     const { xPosition, yPosition, enemyRadius } = enemyCoords;
 
     canvasCtx.beginPath();
+    canvasCtx.lineWidth = 1;
     canvasCtx.strokeStyle = 'red';
 
     canvasCtx.arc(xPosition, yPosition, enemyRadius, 0, getRadians(360));
     canvasCtx.stroke();
 };
 
-const setPosition = () => {
-    // setInterval(() => {
-        const normalizedAngle = Math.abs((angle % 360));
+const startGame = () => {
+    setInterval(() => {
         performPointerItaration(ctx);
         drowEnemy(angle, ctx);
-
-    // }, 100);
+    }, 10);
 };
 
 const updateEnemyStatus = () => {
@@ -135,11 +135,13 @@ const updateEnemyStatus = () => {
     const {
         enemyAngleRange: [min, max]
     } = enemyCoords;
-    const normalizedAngle = Math.abs((angle % 360);
-    console.log(enemyCoords.enemyAngleRange);
 
-    if (normalizedAngle >= max && normalizedAngle <= min) {
-        console.log('worked');
+    const validatedAngle = angle === 360 ? 0 : angle;
+    const isEnemyInRange = validatedAngle > min && validatedAngle < max;
+
+    console.log(min, validatedAngle, max);
+    if (isEnemyInRange) {
+        enemyCoords = null;
     }
 };
 const changePointerDirection = () => {
@@ -147,5 +149,19 @@ const changePointerDirection = () => {
     updateEnemyStatus();
 };
 
-setButtonListener(changePointerDirection);
-setPosition();
+let isGameStarted: boolean = false;
+const addListenerToStartGame = (listener: () => void) => {
+    const button = document.getElementById('button');
+
+    button.addEventListener('keydown', event => event.preventDefault());
+    button.addEventListener('click', () => {
+        if (!isGameStarted) {
+            isGameStarted = true;
+            listener();
+            document.body.focus();
+        }
+    });
+};
+setDocumentListener(changePointerDirection);
+
+addListenerToStartGame(startGame);
