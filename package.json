@@ -4,11 +4,14 @@
     "description": "",
     "main": "index.js",
     "scripts": {
+        "prod": "parcel build index.html",
+        "deploy:github": "npm run prod && node ./scripts/deploy-github",
         "dev": "parcel index.html"
     },
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "gh-pages": "^2.2.0",
         "parcel": "^1.12.4"
     },
     "devDependencies": {
