@@ -9,4 +9,4 @@ parcelRequire=function(e,r,t,n){var i,o="function"==typeof parcelRequire&&parcel
 },{"../model/game.model":"VXXF","../helpers/radiant-transformer":"GXGn","../helpers/randomizer":"pT8Q"}],"QCba":[function(require,module,exports) {
 "use strict";Object.defineProperty(exports,"__esModule",{value:!0}),require("./src/game/");
 },{"./src/game/":"Ztbj"}]},{},["QCba"], null)
-//# sourceMappingURL=/game_touch.752c980e.js.map
+//# sourceMappingURL=game_touch.752c980e.js.map
