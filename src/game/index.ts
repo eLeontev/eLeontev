@@ -18,6 +18,7 @@ const canvasMiddlePoint: MiddleCoordinate = {
 };
 
 const { x, y } = canvasMiddlePoint;
+let angle = 179;
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -39,21 +40,19 @@ const setStaticFigures = (canvasCtx: CanvasRenderingContext2D) => {
     canvasCtx.stroke();
 };
 
-let angle = 179;
-
 let pointerDirection = clockwise;
 
 const setDocumentListener = (listener: () => void) => {
     document.addEventListener('click', listener);
     document.addEventListener('keydown', listener);
 };
-const drowPointer = (angle: number, canvasCtx: CanvasRenderingContext2D, usedColor: string, isForClear: boolean) => {
+const drowPointer = (angle: number, canvasCtx: CanvasRenderingContext2D, usedColor: string) => {
     const angleRad = getRadians(angle);
     const xPosition = radius * Math.sin(angleRad) + x;
     const yPosition = radius * Math.cos(angleRad) + y;
 
     canvasCtx.beginPath();
-    canvasCtx.lineWidth = isForClear ? 4 + 2 : 4;
+    canvasCtx.lineWidth = 4;
     canvasCtx.lineJoin = 'round';
     canvasCtx.strokeStyle = usedColor;
     canvasCtx.moveTo(x, y);
@@ -62,21 +61,12 @@ const drowPointer = (angle: number, canvasCtx: CanvasRenderingContext2D, usedCol
     canvasCtx.stroke();
 };
 
-const cleanUpPreviosPointer = (canvasCtx: CanvasRenderingContext2D) => {
-    canvasCtx.lineWidth = 4 + 2;
-    canvasCtx.strokeStyle = 'white';
-    canvasCtx.stroke();
-};
-
 const getUpdatedAngle = (updatedAngle: number, direction: number) => {
     return direction === clockwise ? (updatedAngle <= 0 ? 360 : updatedAngle) : updatedAngle >= 360 ? 0 : updatedAngle;
 };
 
 const performPointerItaration = (canvasCtx: CanvasRenderingContext2D) => {
-    cleanUpPreviosPointer(canvasCtx);
-    setStaticFigures(canvasCtx);
-    drowPointer(angle - pointerDirection, canvasCtx, 'white', true);
-    drowPointer(angle, canvasCtx, 'blue', false);
+    drowPointer(angle, canvasCtx, 'blue');
     angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
 };
 
@@ -122,8 +112,16 @@ const drowEnemy = (angle: number, canvasCtx: CanvasRenderingContext2D) => {
     canvasCtx.stroke();
 };
 
+const performCleanUp = (canvasCtx: CanvasRenderingContext2D) => {
+    canvasCtx.beginPath();
+    canvasCtx.fillStyle = 'white';
+    canvasCtx.fillRect(0, 0, canvasSize, canvasSize);
+};
+
 const startGame = () => {
     setInterval(() => {
+        performCleanUp(ctx);
+        setStaticFigures(ctx);
         performPointerItaration(ctx);
         drowEnemy(angle, ctx);
     }, 10);
@@ -141,7 +139,6 @@ const updateEnemyStatus = () => {
     const validatedAngle = angle === 360 ? 0 : angle;
     const isEnemyInRange = validatedAngle > min && validatedAngle < max;
 
-    console.log(min, validatedAngle, max);
     if (isEnemyInRange) {
         enemyCoords = null;
     }
