@@ -1,9 +1,11 @@
-import { Game, MiddleCoordinate, direction } from '../model/game.model';
+import { MiddleCoordinate, direction } from '../model/game.model';
 import { getRadians } from '../helpers/radiant-transformer';
 import { randomIntegerInRange } from '../helpers/randomizer';
 
 const { clockwise, сСlockwise } = direction;
-const [{ width, height }]: DOMRectList = document.body.getClientRects();
+const domRectList = document.body.getClientRects();
+const { width, height } = domRectList[0];
+
 const canvasSize = width > height ? height : width;
 const canvasMiddlePosition = canvasSize / 2;
 const radius = canvasMiddlePosition * 0.9;
@@ -18,7 +20,7 @@ const canvasMiddlePoint: MiddleCoordinate = {
 const { x, y } = canvasMiddlePoint;
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 ctx.canvas.width = canvasSize;
 ctx.canvas.height = canvasSize;
 ctx.canvas.style.backgroundColor = 'white';
@@ -104,7 +106,7 @@ const calclulateEnemy = (angle: number) => {
     };
 };
 
-let enemyCoords;
+let enemyCoords: any;
 const drowEnemy = (angle: number, canvasCtx: CanvasRenderingContext2D) => {
     if (!enemyCoords) {
         enemyCoords = calclulateEnemy(angle);
@@ -152,6 +154,10 @@ const changePointerDirection = () => {
 let isGameStarted: boolean = false;
 const addListenerToStartGame = (listener: () => void) => {
     const button = document.getElementById('button');
+
+    if (!button) {
+        return;
+    }
 
     button.addEventListener('keydown', event => event.preventDefault());
     button.addEventListener('click', () => {
