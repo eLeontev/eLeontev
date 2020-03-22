@@ -4,8 +4,8 @@
     "description": "",
     "main": "index.js",
     "scripts": {
-        "prod": "parcel build index.html",
-        "deploy:github": "npm run prod && node ./scripts/deploy-github",
+        "prod": "parcel build index.html --public-url .",
+        "deploy:gh-pages": "npm run prod && node ./scripts/deploy-github",
         "dev": "parcel index.html"
     },
     "author": "",
