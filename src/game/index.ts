@@ -19,6 +19,7 @@ const canvasMiddlePoint: MiddleCoordinate = {
 
 const { x, y } = canvasMiddlePoint;
 let angle = 179;
+let changeDirectionCounter = 5;
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -118,18 +119,39 @@ const performCleanUp = (canvasCtx: CanvasRenderingContext2D) => {
     canvasCtx.fillRect(0, 0, canvasSize, canvasSize);
 };
 
+const drowChangeDirectionCounter = (canvasCtx: CanvasRenderingContext2D) => {
+    const messageWithCounter = `change direction tries: ${changeDirectionCounter}`;
+    const textColor = changeDirectionCounter ? 'black' : 'red';
+
+    canvasCtx.font = '25px Arial';
+    canvasCtx.fillStyle = textColor;
+    canvasCtx.fillText(messageWithCounter, 10, 40);
+};
+
 const startGame = () => {
     setInterval(() => {
         performCleanUp(ctx);
         setStaticFigures(ctx);
         performPointerItaration(ctx);
         drowEnemy(angle, ctx);
+        drowChangeDirectionCounter(ctx);
     }, 10);
 };
 
-const updateEnemyStatus = () => {
-    if (!enemyCoords) {
+const updateChangeDirectionCounter = (isEnemyInRange: boolean) => {
+    const shouldNotReduceCounter = !isEnemyInRange && changeDirectionCounter === 0;
+
+    if (shouldNotReduceCounter) {
         return;
+    }
+
+    const diff = isEnemyInRange ? 1 : -1;
+    changeDirectionCounter = changeDirectionCounter + diff;
+};
+
+const getUpdatedEnemyStatus = () => {
+    if (!enemyCoords) {
+        return false;
     }
 
     const {
@@ -139,13 +161,20 @@ const updateEnemyStatus = () => {
     const validatedAngle = angle === 360 ? 0 : angle;
     const isEnemyInRange = validatedAngle > min && validatedAngle < max;
 
+    return isEnemyInRange;
+};
+
+const changePointerDirection = () => {
+    const isEnemyInRange = getUpdatedEnemyStatus();
     if (isEnemyInRange) {
         enemyCoords = null;
     }
-};
-const changePointerDirection = () => {
-    pointerDirection = pointerDirection === clockwise ? сСlockwise : clockwise;
-    updateEnemyStatus();
+
+    if (changeDirectionCounter || isEnemyInRange) {
+        pointerDirection = pointerDirection === clockwise ? сСlockwise : clockwise;
+    }
+
+    updateChangeDirectionCounter(isEnemyInRange);
 };
 
 let isGameStarted: boolean = false;
