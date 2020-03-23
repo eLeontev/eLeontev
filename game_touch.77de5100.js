@@ -180,6 +180,7 @@ var canvasMiddlePoint = {
 var x = canvasMiddlePoint.x,
     y = canvasMiddlePoint.y;
 var angle = 179;
+var changeDirectionCounter = 5;
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
 ctx.canvas.width = canvasSize;
@@ -271,18 +272,38 @@ var performCleanUp = function performCleanUp(canvasCtx) {
   canvasCtx.fillRect(0, 0, canvasSize, canvasSize);
 };
 
+var drowChangeDirectionCounter = function drowChangeDirectionCounter(canvasCtx) {
+  var messageWithCounter = "change direction tries: " + changeDirectionCounter;
+  var textColor = changeDirectionCounter ? 'black' : 'red';
+  canvasCtx.font = '25px Arial';
+  canvasCtx.fillStyle = textColor;
+  canvasCtx.fillText(messageWithCounter, 10, 40);
+};
+
 var startGame = function startGame() {
   setInterval(function () {
     performCleanUp(ctx);
     setStaticFigures(ctx);
     performPointerItaration(ctx);
     drowEnemy(angle, ctx);
+    drowChangeDirectionCounter(ctx);
   }, 10);
 };
 
-var updateEnemyStatus = function updateEnemyStatus() {
-  if (!enemyCoords) {
+var updateChangeDirectionCounter = function updateChangeDirectionCounter(isEnemyInRange) {
+  var shouldNotReduceCounter = !isEnemyInRange && changeDirectionCounter === 0;
+
+  if (shouldNotReduceCounter) {
     return;
+  }
+
+  var diff = isEnemyInRange ? 1 : -1;
+  changeDirectionCounter = changeDirectionCounter + diff;
+};
+
+var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
+  if (!enemyCoords) {
+    return false;
   }
 
   var _a = enemyCoords.enemyAngleRange,
@@ -290,15 +311,21 @@ var updateEnemyStatus = function updateEnemyStatus() {
       max = _a[1];
   var validatedAngle = angle === 360 ? 0 : angle;
   var isEnemyInRange = validatedAngle > min && validatedAngle < max;
+  return isEnemyInRange;
+};
+
+var changePointerDirection = function changePointerDirection() {
+  var isEnemyInRange = getUpdatedEnemyStatus();
 
   if (isEnemyInRange) {
     enemyCoords = null;
   }
-};
 
-var changePointerDirection = function changePointerDirection() {
-  pointerDirection = pointerDirection === clockwise ? сСlockwise : clockwise;
-  updateEnemyStatus();
+  if (changeDirectionCounter || isEnemyInRange) {
+    pointerDirection = pointerDirection === clockwise ? сСlockwise : clockwise;
+  }
+
+  updateChangeDirectionCounter(isEnemyInRange);
 };
 
 var isGameStarted = false;
@@ -360,7 +387,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "51963" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56129" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
