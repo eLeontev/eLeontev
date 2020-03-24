@@ -71,6 +71,8 @@ const performPointerItaration = (canvasCtx: CanvasRenderingContext2D) => {
     angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
 };
 
+let incrementId = -1;
+
 const calclulateEnemy = (angle: number) => {
     const minEnemyPosition = Math.abs(angle % 360) + minimumEnemyOffset;
     const maxEnemyPosition = minEnemyPosition + 360 - minimumEnemyOffset;
@@ -88,29 +90,44 @@ const calclulateEnemy = (angle: number) => {
     const min = middlePointAngle - angleOffset;
     const max = middlePointAngle + angleOffset;
 
+    incrementId = incrementId + 1;
+
     return {
         xPosition,
         yPosition,
         enemyRadius,
         middlePointAngle,
-        enemyAngleRange: [min, max]
+        enemyAngleRange: [min, max],
+        enemyId: incrementId
     };
 };
 
-let enemyCoords: any;
-const drowEnemy = (angle: number, canvasCtx: CanvasRenderingContext2D) => {
-    if (!enemyCoords) {
-        enemyCoords = calclulateEnemy(angle);
+const state: any = {
+    enemies: []
+};
+
+const drowEnemies = (enemies: any[], canvasCtx: CanvasRenderingContext2D) =>
+    enemies.forEach(({ xPosition, yPosition, enemyRadius }: any) => {
+        canvasCtx.beginPath();
+        canvasCtx.lineWidth = 1;
+        canvasCtx.strokeStyle = 'red';
+
+        canvasCtx.arc(xPosition, yPosition, enemyRadius, 0, getRadians(360));
+        canvasCtx.stroke();
+    });
+
+const updateEnemies = (angle: number, canvasCtx: CanvasRenderingContext2D) => {
+    if (!state.enemies.length) {
+        state.enemies.push(calclulateEnemy(angle));
     }
 
-    const { xPosition, yPosition, enemyRadius } = enemyCoords;
+    drowEnemies(state.enemies, canvasCtx);
+};
 
-    canvasCtx.beginPath();
-    canvasCtx.lineWidth = 1;
-    canvasCtx.strokeStyle = 'red';
-
-    canvasCtx.arc(xPosition, yPosition, enemyRadius, 0, getRadians(360));
-    canvasCtx.stroke();
+const addEnemy = (angle: number) => {
+    if (state.enemies.length < 10) {
+        state.enemies.push(calclulateEnemy(angle));
+    }
 };
 
 const performCleanUp = (canvasCtx: CanvasRenderingContext2D) => {
@@ -128,12 +145,24 @@ const drowChangeDirectionCounter = (canvasCtx: CanvasRenderingContext2D) => {
     canvasCtx.fillText(messageWithCounter, 10, 40);
 };
 
+let tickCounter = -1;
+
+const validateEnemyCounts = (angle: any) => {
+    tickCounter = tickCounter + 1;
+
+    if (tickCounter >= 120) {
+        tickCounter = 0;
+        addEnemy(angle);
+    }
+};
+
 const startGame = () => {
     setInterval(() => {
         performCleanUp(ctx);
         setStaticFigures(ctx);
         performPointerItaration(ctx);
-        drowEnemy(angle, ctx);
+        validateEnemyCounts(angle);
+        updateEnemies(angle, ctx);
         drowChangeDirectionCounter(ctx);
     }, 10);
 };
@@ -150,25 +179,35 @@ const updateChangeDirectionCounter = (isEnemyInRange: boolean) => {
 };
 
 const getUpdatedEnemyStatus = () => {
-    if (!enemyCoords) {
+    if (!state.enemies.length) {
         return false;
     }
 
-    const {
-        enemyAngleRange: [min, max]
-    } = enemyCoords;
+    const enemiesInRange = state.enemies
+        .filter(({ enemyAngleRange: [min, max] }: any) => {
+            const validatedAngle = angle === 360 ? 0 : angle;
+            const isEnemyInRange = validatedAngle > min && validatedAngle < max;
 
-    const validatedAngle = angle === 360 ? 0 : angle;
-    const isEnemyInRange = validatedAngle > min && validatedAngle < max;
+            return isEnemyInRange;
+        })
+        .map(({ enemyId }: any) => enemyId);
+
+    let isEnemyInRange = false;
+
+    if (enemiesInRange.length) {
+        debugger;
+        state.enemies = state.enemies.filter(
+            (enemy: any) => !enemiesInRange.some((enemyId: number) => enemyId === enemy.enemyId)
+        );
+
+        isEnemyInRange = true;
+    }
 
     return isEnemyInRange;
 };
 
 const changePointerDirection = () => {
     const isEnemyInRange = getUpdatedEnemyStatus();
-    if (isEnemyInRange) {
-        enemyCoords = null;
-    }
 
     if (changeDirectionCounter || isEnemyInRange) {
         pointerDirection = pointerDirection === clockwise ? сСlockwise : clockwise;
