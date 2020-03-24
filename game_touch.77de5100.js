@@ -228,6 +228,8 @@ var performPointerItaration = function performPointerItaration(canvasCtx) {
   angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
 };
 
+var incrementId = -1;
+
 var calclulateEnemy = function calclulateEnemy(angle) {
   var minEnemyPosition = Math.abs(angle % 360) + minimumEnemyOffset;
   var maxEnemyPosition = minEnemyPosition + 360 - minimumEnemyOffset;
@@ -240,30 +242,46 @@ var calclulateEnemy = function calclulateEnemy(angle) {
   var angleOffset = Math.atan(enemyRadius / distanceFromMiddlePoint) * 180 / Math.PI;
   var min = middlePointAngle - angleOffset;
   var max = middlePointAngle + angleOffset;
+  incrementId = incrementId + 1;
   return {
     xPosition: xPosition,
     yPosition: yPosition,
     enemyRadius: enemyRadius,
     middlePointAngle: middlePointAngle,
-    enemyAngleRange: [min, max]
+    enemyAngleRange: [min, max],
+    enemyId: incrementId
   };
 };
 
-var enemyCoords;
+var state = {
+  enemies: []
+};
 
-var drowEnemy = function drowEnemy(angle, canvasCtx) {
-  if (!enemyCoords) {
-    enemyCoords = calclulateEnemy(angle);
+var drowEnemies = function drowEnemies(enemies, canvasCtx) {
+  return enemies.forEach(function (_a) {
+    var xPosition = _a.xPosition,
+        yPosition = _a.yPosition,
+        enemyRadius = _a.enemyRadius;
+    canvasCtx.beginPath();
+    canvasCtx.lineWidth = 1;
+    canvasCtx.strokeStyle = 'red';
+    canvasCtx.arc(xPosition, yPosition, enemyRadius, 0, radiant_transformer_1.getRadians(360));
+    canvasCtx.stroke();
+  });
+};
+
+var updateEnemies = function updateEnemies(angle, canvasCtx) {
+  if (!state.enemies.length) {
+    state.enemies.push(calclulateEnemy(angle));
   }
 
-  var xPosition = enemyCoords.xPosition,
-      yPosition = enemyCoords.yPosition,
-      enemyRadius = enemyCoords.enemyRadius;
-  canvasCtx.beginPath();
-  canvasCtx.lineWidth = 1;
-  canvasCtx.strokeStyle = 'red';
-  canvasCtx.arc(xPosition, yPosition, enemyRadius, 0, radiant_transformer_1.getRadians(360));
-  canvasCtx.stroke();
+  drowEnemies(state.enemies, canvasCtx);
+};
+
+var addEnemy = function addEnemy(angle) {
+  if (state.enemies.length < 10) {
+    state.enemies.push(calclulateEnemy(angle));
+  }
 };
 
 var performCleanUp = function performCleanUp(canvasCtx) {
@@ -280,12 +298,24 @@ var drowChangeDirectionCounter = function drowChangeDirectionCounter(canvasCtx) 
   canvasCtx.fillText(messageWithCounter, 10, 40);
 };
 
+var tickCounter = -1;
+
+var validateEnemyCounts = function validateEnemyCounts(angle) {
+  tickCounter = tickCounter + 1;
+
+  if (tickCounter >= 120) {
+    tickCounter = 0;
+    addEnemy(angle);
+  }
+};
+
 var startGame = function startGame() {
   setInterval(function () {
     performCleanUp(ctx);
     setStaticFigures(ctx);
     performPointerItaration(ctx);
-    drowEnemy(angle, ctx);
+    validateEnemyCounts(angle);
+    updateEnemies(angle, ctx);
     drowChangeDirectionCounter(ctx);
   }, 10);
 };
@@ -302,24 +332,38 @@ var updateChangeDirectionCounter = function updateChangeDirectionCounter(isEnemy
 };
 
 var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
-  if (!enemyCoords) {
+  if (!state.enemies.length) {
     return false;
   }
 
-  var _a = enemyCoords.enemyAngleRange,
-      min = _a[0],
-      max = _a[1];
-  var validatedAngle = angle === 360 ? 0 : angle;
-  var isEnemyInRange = validatedAngle > min && validatedAngle < max;
+  var enemiesInRange = state.enemies.filter(function (_a) {
+    var _b = _a.enemyAngleRange,
+        min = _b[0],
+        max = _b[1];
+    var validatedAngle = angle === 360 ? 0 : angle;
+    var isEnemyInRange = validatedAngle > min && validatedAngle < max;
+    return isEnemyInRange;
+  }).map(function (_a) {
+    var enemyId = _a.enemyId;
+    return enemyId;
+  });
+  var isEnemyInRange = false;
+
+  if (enemiesInRange.length) {
+    debugger;
+    state.enemies = state.enemies.filter(function (enemy) {
+      return !enemiesInRange.some(function (enemyId) {
+        return enemyId === enemy.enemyId;
+      });
+    });
+    isEnemyInRange = true;
+  }
+
   return isEnemyInRange;
 };
 
 var changePointerDirection = function changePointerDirection() {
   var isEnemyInRange = getUpdatedEnemyStatus();
-
-  if (isEnemyInRange) {
-    enemyCoords = null;
-  }
 
   if (changeDirectionCounter || isEnemyInRange) {
     pointerDirection = pointerDirection === clockwise ? сСlockwise : clockwise;
@@ -387,7 +431,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56129" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59439" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
