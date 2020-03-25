@@ -4,7 +4,7 @@ export interface Game {
     score: number;
 }
 
-export interface MiddleCoordinate {
+export interface Coordinate {
     x: number;
     y: number;
 }
@@ -12,7 +12,7 @@ export interface MiddleCoordinate {
 export interface Field {
     radius: number;
     backgroundColor: number;
-    middleCoordinate: MiddleCoordinate;
+    middleCoordinate: Coordinate;
 }
 
 export enum direction {
@@ -29,4 +29,13 @@ export interface Pointer {
 export interface Switcher {
     rootAngle: number;
     offsets: number;
+}
+
+export interface Enemy {
+    xPosition: number;
+    yPosition: number;
+    enemyRadius: number;
+    middlePointAngle: number;
+    enemyAngleRange: Array<number>;
+    enemyId: number;
 }

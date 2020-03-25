@@ -1,6 +1,11 @@
-import { MiddleCoordinate, direction } from '../model/game.model';
+import { Coordinate, direction, Enemy } from '../model/game.model';
 import { getRadians } from '../helpers/radiant-transformer';
 import { randomIntegerInRange } from '../helpers/randomizer';
+import { CanvasRenderer } from './renderer';
+
+const state: any = {
+    enemies: []
+};
 
 const { clockwise, сСlockwise } = direction;
 const domRectList = document.body.getClientRects();
@@ -12,7 +17,7 @@ const radius = canvasMiddlePosition * 0.9;
 const innerRadius = radius / 3;
 const minimumEnemyOffset = 20;
 
-const canvasMiddlePoint: MiddleCoordinate = {
+const canvasMiddlePoint: Coordinate = {
     x: canvasMiddlePosition,
     y: canvasMiddlePosition
 };
@@ -23,23 +28,15 @@ let changeDirectionCounter = 5;
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-ctx.canvas.width = canvasSize;
-ctx.canvas.height = canvasSize;
-ctx.canvas.style.backgroundColor = 'white';
 
-const setStaticFigures = (canvasCtx: CanvasRenderingContext2D) => {
-    canvasCtx.beginPath();
-    canvasCtx.lineWidth = 1;
-    canvasCtx.strokeStyle = 'black';
-    canvasCtx.lineJoin = 'bevel';
-
-    canvasCtx.arc(x, y, radius, 0, getRadians(360));
-    canvasCtx.stroke();
-
-    canvasCtx.beginPath();
-    canvasCtx.arc(x, y, innerRadius, 0, getRadians(360));
-    canvasCtx.stroke();
-};
+const canvasRenderer = new CanvasRenderer(
+    ctx,
+    radius,
+    innerRadius,
+    canvasSize,
+    getRadians,
+    canvasMiddlePoint
+);
 
 let pointerDirection = clockwise;
 
@@ -47,33 +44,32 @@ const setDocumentListener = (listener: () => void) => {
     document.addEventListener('click', listener);
     document.addEventListener('keydown', listener);
 };
-const drowPointer = (angle: number, canvasCtx: CanvasRenderingContext2D, usedColor: string) => {
+const drowPointer = (angle: number) => {
     const angleRad = getRadians(angle);
     const xPosition = radius * Math.sin(angleRad) + x;
     const yPosition = radius * Math.cos(angleRad) + y;
 
-    canvasCtx.beginPath();
-    canvasCtx.lineWidth = 4;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.strokeStyle = usedColor;
-    canvasCtx.moveTo(x, y);
-
-    canvasCtx.lineTo(xPosition, yPosition);
-    canvasCtx.stroke();
+    canvasRenderer.drowPointer(xPosition, yPosition);
 };
 
 const getUpdatedAngle = (updatedAngle: number, direction: number) => {
-    return direction === clockwise ? (updatedAngle <= 0 ? 360 : updatedAngle) : updatedAngle >= 360 ? 0 : updatedAngle;
+    return direction === clockwise
+        ? updatedAngle <= 0
+            ? 360
+            : updatedAngle
+        : updatedAngle >= 360
+        ? 0
+        : updatedAngle;
 };
 
-const performPointerItaration = (canvasCtx: CanvasRenderingContext2D) => {
-    drowPointer(angle, canvasCtx, 'blue');
+const performPointerItaration = () => {
+    drowPointer(angle);
     angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
 };
 
 let incrementId = -1;
 
-const calclulateEnemy = (angle: number) => {
+const calclulateEnemy = (angle: number): Enemy => {
     const minEnemyPosition = Math.abs(angle % 360) + minimumEnemyOffset;
     const maxEnemyPosition = minEnemyPosition + 360 - minimumEnemyOffset;
 
@@ -102,26 +98,12 @@ const calclulateEnemy = (angle: number) => {
     };
 };
 
-const state: any = {
-    enemies: []
-};
-
-const drowEnemies = (enemies: any[], canvasCtx: CanvasRenderingContext2D) =>
-    enemies.forEach(({ xPosition, yPosition, enemyRadius }: any) => {
-        canvasCtx.beginPath();
-        canvasCtx.lineWidth = 1;
-        canvasCtx.strokeStyle = 'red';
-
-        canvasCtx.arc(xPosition, yPosition, enemyRadius, 0, getRadians(360));
-        canvasCtx.stroke();
-    });
-
-const updateEnemies = (angle: number, canvasCtx: CanvasRenderingContext2D) => {
+const updateEnemies = (angle: number) => {
     if (!state.enemies.length) {
         state.enemies.push(calclulateEnemy(angle));
     }
 
-    drowEnemies(state.enemies, canvasCtx);
+    canvasRenderer.drowEnemies(state.enemies);
 };
 
 const addEnemy = (angle: number) => {
@@ -130,19 +112,11 @@ const addEnemy = (angle: number) => {
     }
 };
 
-const performCleanUp = (canvasCtx: CanvasRenderingContext2D) => {
-    canvasCtx.beginPath();
-    canvasCtx.fillStyle = 'white';
-    canvasCtx.fillRect(0, 0, canvasSize, canvasSize);
-};
-
-const drowChangeDirectionCounter = (canvasCtx: CanvasRenderingContext2D) => {
+const drowChangeDirectionCounter = () => {
     const messageWithCounter = `change direction tries: ${changeDirectionCounter}`;
-    const textColor = changeDirectionCounter ? 'black' : 'red';
+    const specificTextColor = !changeDirectionCounter ? 'red' : null;
 
-    canvasCtx.font = '25px Arial';
-    canvasCtx.fillStyle = textColor;
-    canvasCtx.fillText(messageWithCounter, 10, 40);
+    canvasRenderer.drowText(messageWithCounter, { x: 10, y: 40 }, specificTextColor);
 };
 
 let tickCounter = -1;
@@ -150,7 +124,7 @@ let tickCounter = -1;
 const validateEnemyCounts = (angle: any) => {
     tickCounter = tickCounter + 1;
 
-    if (tickCounter >= 120) {
+    if (tickCounter >= 180) {
         tickCounter = 0;
         addEnemy(angle);
     }
@@ -158,12 +132,12 @@ const validateEnemyCounts = (angle: any) => {
 
 const startGame = () => {
     setInterval(() => {
-        performCleanUp(ctx);
-        setStaticFigures(ctx);
-        performPointerItaration(ctx);
+        canvasRenderer.canvasCleanUp();
+        canvasRenderer.drowStaticGameField();
+        performPointerItaration();
         validateEnemyCounts(angle);
-        updateEnemies(angle, ctx);
-        drowChangeDirectionCounter(ctx);
+        updateEnemies(angle);
+        drowChangeDirectionCounter();
     }, 10);
 };
 
@@ -195,7 +169,6 @@ const getUpdatedEnemyStatus = () => {
     let isEnemyInRange = false;
 
     if (enemiesInRange.length) {
-        debugger;
         state.enemies = state.enemies.filter(
             (enemy: any) => !enemiesInRange.some((enemyId: number) => enemyId === enemy.enemyId)
         );
