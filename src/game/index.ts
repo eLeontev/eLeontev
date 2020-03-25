@@ -150,7 +150,7 @@ const updateChangeDirectionCounter = (diff: number) => {
 };
 
 const reduceChangeDirectionCounterOnLongPending = () => {
-    if (state.countOfTicksWithoutEnemyDestory > 180) {
+    if (state.countOfTicksWithoutEnemyDestory > 90) {
         cleanUpTicksWithoutEnemyDestroy(true);
         updateChangeDirectionCounter(-1);
     }
