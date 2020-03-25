@@ -4,7 +4,10 @@ import { randomIntegerInRange } from '../helpers/randomizer';
 import { CanvasRenderer } from './renderer';
 
 const state: any = {
-    enemies: []
+    enemies: [],
+    tickCounter: 0,
+    countOfTicksWithoutEnemyDestory: 0,
+    changeDirectionCounter: 5
 };
 
 const { clockwise, сСlockwise } = direction;
@@ -24,7 +27,6 @@ const canvasMiddlePoint: Coordinate = {
 
 const { x, y } = canvasMiddlePoint;
 let angle = 179;
-let changeDirectionCounter = 5;
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -113,20 +115,44 @@ const addEnemy = (angle: number) => {
 };
 
 const drowChangeDirectionCounter = () => {
+    const { changeDirectionCounter } = state;
     const messageWithCounter = `change direction tries: ${changeDirectionCounter}`;
     const specificTextColor = !changeDirectionCounter ? 'red' : null;
 
     canvasRenderer.drowText(messageWithCounter, { x: 10, y: 40 }, specificTextColor);
 };
 
-let tickCounter = -1;
-
 const validateEnemyCounts = (angle: any) => {
-    tickCounter = tickCounter + 1;
+    state.tickCounter = state.tickCounter + 1;
 
-    if (tickCounter >= 180) {
-        tickCounter = 0;
+    if (state.tickCounter >= 180) {
+        state.tickCounter = 0;
         addEnemy(angle);
+    }
+};
+
+const validateTicksWithoutDestroy = () => {
+    state.countOfTicksWithoutEnemyDestory = state.countOfTicksWithoutEnemyDestory + 1;
+};
+
+const cleanUpTicksWithoutEnemyDestroy = (isEnemyInRange: boolean) => {
+    if (isEnemyInRange) {
+        state.countOfTicksWithoutEnemyDestory = 0;
+    }
+};
+
+const updateChangeDirectionCounter = (diff: number) => {
+    state.changeDirectionCounter = state.changeDirectionCounter + diff;
+
+    if (state.changeDirectionCounter < 0) {
+        state.changeDirectionCounter = 0;
+    }
+};
+
+const reduceChangeDirectionCounterOnLongPending = () => {
+    if (state.countOfTicksWithoutEnemyDestory > 180) {
+        cleanUpTicksWithoutEnemyDestroy(true);
+        updateChangeDirectionCounter(-1);
     }
 };
 
@@ -135,13 +161,18 @@ const startGame = () => {
         canvasRenderer.canvasCleanUp();
         canvasRenderer.drowStaticGameField();
         performPointerItaration();
+
         validateEnemyCounts(angle);
+        validateTicksWithoutDestroy();
+        reduceChangeDirectionCounterOnLongPending();
+
         updateEnemies(angle);
         drowChangeDirectionCounter();
     }, 10);
 };
 
-const updateChangeDirectionCounter = (isEnemyInRange: boolean) => {
+const validateChangeDirectionCounter = (isEnemyInRange: boolean) => {
+    const { changeDirectionCounter } = state;
     const shouldNotReduceCounter = !isEnemyInRange && changeDirectionCounter === 0;
 
     if (shouldNotReduceCounter) {
@@ -149,7 +180,7 @@ const updateChangeDirectionCounter = (isEnemyInRange: boolean) => {
     }
 
     const diff = isEnemyInRange ? 1 : -1;
-    changeDirectionCounter = changeDirectionCounter + diff;
+    updateChangeDirectionCounter(diff);
 };
 
 const getUpdatedEnemyStatus = () => {
@@ -181,12 +212,13 @@ const getUpdatedEnemyStatus = () => {
 
 const changePointerDirection = () => {
     const isEnemyInRange = getUpdatedEnemyStatus();
-
+    const { changeDirectionCounter } = state;
     if (changeDirectionCounter || isEnemyInRange) {
         pointerDirection = pointerDirection === clockwise ? сСlockwise : clockwise;
     }
 
-    updateChangeDirectionCounter(isEnemyInRange);
+    cleanUpTicksWithoutEnemyDestroy(isEnemyInRange);
+    validateChangeDirectionCounter(isEnemyInRange);
 };
 
 let isGameStarted: boolean = false;
