@@ -149,6 +149,138 @@ Object.defineProperty(exports, "__esModule", {
 exports.randomIntegerInRange = function (min, max) {
   return Math.floor(min + Math.random() * (max + 1 - min));
 };
+},{}],"src/game/renderer.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var CanvasRenderer =
+/** @class */
+function () {
+  function CanvasRenderer(canvasCtx, radius, innerRadius, canvasSize, getRadians, canvasMiddlePoint) {
+    this.canvasCtx = canvasCtx;
+    this.radius = radius;
+    this.innerRadius = innerRadius;
+    this.canvasSize = canvasSize;
+    this.defaultStartAngle = 0;
+    this.defaultLineWidth = 1;
+    this.pointerLineWidth = 4;
+    this.defaultLineJoin = 'round';
+    this.defaultStrokeStyleColor = 'black';
+    this.cleanUpBackgroundColor = 'white';
+    this.enemyStrokeStyleColor = 'red';
+    this.pointerStyleColor = 'blue';
+    this.defaultTextColor = 'black';
+    this.defaultEndAngle = getRadians(360);
+    var x = canvasMiddlePoint.x,
+        y = canvasMiddlePoint.y;
+    this.middleXCoordinate = x;
+    this.middleYCoordinate = y;
+    this.initCanvas();
+  }
+
+  CanvasRenderer.prototype.drowStaticGameField = function () {
+    var _this = this;
+
+    [this.innerRadius, this.radius].forEach(function (radius) {
+      return _this.drowStrokedCircle(radius);
+    });
+  };
+
+  CanvasRenderer.prototype.drowEnemy = function (radius, x, y, strokeStyleColor) {
+    if (strokeStyleColor === void 0) {
+      strokeStyleColor = this.enemyStrokeStyleColor;
+    }
+
+    this.drowStrokedCircle(radius, x, y, strokeStyleColor);
+  };
+
+  CanvasRenderer.prototype.canvasCleanUp = function () {
+    this.canvasCtx.beginPath();
+    this.canvasCtx.fillStyle = this.cleanUpBackgroundColor;
+    this.canvasCtx.fillRect(0, 0, this.canvasSize, this.canvasSize);
+  };
+
+  CanvasRenderer.prototype.drowEnemies = function (enemies) {
+    var _this = this;
+
+    enemies.forEach(function (_a) {
+      var xPosition = _a.xPosition,
+          yPosition = _a.yPosition,
+          enemyRadius = _a.enemyRadius;
+      return _this.drowEnemy(enemyRadius, xPosition, yPosition);
+    });
+  };
+
+  CanvasRenderer.prototype.drowPointer = function (xPosition, yPosition) {
+    this.canvasCtx.beginPath();
+    this.setPathView(this.pointerStyleColor, this.pointerLineWidth, this.defaultLineJoin);
+    this.canvasCtx.moveTo(this.middleXCoordinate, this.middleYCoordinate);
+    this.canvasCtx.lineTo(xPosition, yPosition);
+    this.canvasCtx.stroke();
+  };
+
+  CanvasRenderer.prototype.drowText = function (messageWithCounter, _a, specificTextColor) {
+    var x = _a.x,
+        y = _a.y;
+    this.canvasCtx.font = '25px Arial';
+    this.canvasCtx.fillStyle = specificTextColor || this.defaultTextColor;
+    this.canvasCtx.fillText(messageWithCounter, x, y);
+  };
+
+  CanvasRenderer.prototype.drowStrokedCircle = function (radius, x, y, strokeStyleColor, lineWidth, startAngle, endAngle, lineJoin) {
+    if (x === void 0) {
+      x = this.middleXCoordinate;
+    }
+
+    if (y === void 0) {
+      y = this.middleYCoordinate;
+    }
+
+    if (strokeStyleColor === void 0) {
+      strokeStyleColor = this.defaultStrokeStyleColor;
+    }
+
+    if (lineWidth === void 0) {
+      lineWidth = this.defaultLineWidth;
+    }
+
+    if (startAngle === void 0) {
+      startAngle = this.defaultStartAngle;
+    }
+
+    if (endAngle === void 0) {
+      endAngle = this.defaultEndAngle;
+    }
+
+    if (lineJoin === void 0) {
+      lineJoin = this.defaultLineJoin;
+    }
+
+    this.canvasCtx.beginPath();
+    this.setPathView(strokeStyleColor, lineWidth, lineJoin);
+    this.canvasCtx.arc(x, y, radius, startAngle, endAngle);
+    this.canvasCtx.stroke();
+  };
+
+  CanvasRenderer.prototype.initCanvas = function () {
+    this.canvasCtx.canvas.width = this.canvasSize;
+    this.canvasCtx.canvas.height = this.canvasSize;
+    this.canvasCtx.canvas.style.backgroundColor = this.cleanUpBackgroundColor;
+  };
+
+  CanvasRenderer.prototype.setPathView = function (strokeStyleColor, lineWidth, lineJoin) {
+    this.canvasCtx.strokeStyle = strokeStyleColor;
+    this.canvasCtx.lineWidth = lineWidth;
+    this.canvasCtx.lineJoin = lineJoin;
+  };
+
+  return CanvasRenderer;
+}();
+
+exports.CanvasRenderer = CanvasRenderer;
 },{}],"src/game/index.ts":[function(require,module,exports) {
 "use strict";
 
@@ -162,6 +294,11 @@ var radiant_transformer_1 = require("../helpers/radiant-transformer");
 
 var randomizer_1 = require("../helpers/randomizer");
 
+var renderer_1 = require("./renderer");
+
+var state = {
+  enemies: []
+};
 var clockwise = game_model_1.direction.clockwise,
     сСlockwise = game_model_1.direction.сСlockwise;
 var domRectList = document.body.getClientRects();
@@ -183,22 +320,7 @@ var angle = 179;
 var changeDirectionCounter = 5;
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
-ctx.canvas.width = canvasSize;
-ctx.canvas.height = canvasSize;
-ctx.canvas.style.backgroundColor = 'white';
-
-var setStaticFigures = function setStaticFigures(canvasCtx) {
-  canvasCtx.beginPath();
-  canvasCtx.lineWidth = 1;
-  canvasCtx.strokeStyle = 'black';
-  canvasCtx.lineJoin = 'bevel';
-  canvasCtx.arc(x, y, radius, 0, radiant_transformer_1.getRadians(360));
-  canvasCtx.stroke();
-  canvasCtx.beginPath();
-  canvasCtx.arc(x, y, innerRadius, 0, radiant_transformer_1.getRadians(360));
-  canvasCtx.stroke();
-};
-
+var canvasRenderer = new renderer_1.CanvasRenderer(ctx, radius, innerRadius, canvasSize, radiant_transformer_1.getRadians, canvasMiddlePoint);
 var pointerDirection = clockwise;
 
 var setDocumentListener = function setDocumentListener(listener) {
@@ -206,25 +328,19 @@ var setDocumentListener = function setDocumentListener(listener) {
   document.addEventListener('keydown', listener);
 };
 
-var drowPointer = function drowPointer(angle, canvasCtx, usedColor) {
+var drowPointer = function drowPointer(angle) {
   var angleRad = radiant_transformer_1.getRadians(angle);
   var xPosition = radius * Math.sin(angleRad) + x;
   var yPosition = radius * Math.cos(angleRad) + y;
-  canvasCtx.beginPath();
-  canvasCtx.lineWidth = 4;
-  canvasCtx.lineJoin = 'round';
-  canvasCtx.strokeStyle = usedColor;
-  canvasCtx.moveTo(x, y);
-  canvasCtx.lineTo(xPosition, yPosition);
-  canvasCtx.stroke();
+  canvasRenderer.drowPointer(xPosition, yPosition);
 };
 
 var getUpdatedAngle = function getUpdatedAngle(updatedAngle, direction) {
   return direction === clockwise ? updatedAngle <= 0 ? 360 : updatedAngle : updatedAngle >= 360 ? 0 : updatedAngle;
 };
 
-var performPointerItaration = function performPointerItaration(canvasCtx) {
-  drowPointer(angle, canvasCtx, 'blue');
+var performPointerItaration = function performPointerItaration() {
+  drowPointer(angle);
   angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
 };
 
@@ -253,29 +369,12 @@ var calclulateEnemy = function calclulateEnemy(angle) {
   };
 };
 
-var state = {
-  enemies: []
-};
-
-var drowEnemies = function drowEnemies(enemies, canvasCtx) {
-  return enemies.forEach(function (_a) {
-    var xPosition = _a.xPosition,
-        yPosition = _a.yPosition,
-        enemyRadius = _a.enemyRadius;
-    canvasCtx.beginPath();
-    canvasCtx.lineWidth = 1;
-    canvasCtx.strokeStyle = 'red';
-    canvasCtx.arc(xPosition, yPosition, enemyRadius, 0, radiant_transformer_1.getRadians(360));
-    canvasCtx.stroke();
-  });
-};
-
-var updateEnemies = function updateEnemies(angle, canvasCtx) {
+var updateEnemies = function updateEnemies(angle) {
   if (!state.enemies.length) {
     state.enemies.push(calclulateEnemy(angle));
   }
 
-  drowEnemies(state.enemies, canvasCtx);
+  canvasRenderer.drowEnemies(state.enemies);
 };
 
 var addEnemy = function addEnemy(angle) {
@@ -284,18 +383,13 @@ var addEnemy = function addEnemy(angle) {
   }
 };
 
-var performCleanUp = function performCleanUp(canvasCtx) {
-  canvasCtx.beginPath();
-  canvasCtx.fillStyle = 'white';
-  canvasCtx.fillRect(0, 0, canvasSize, canvasSize);
-};
-
-var drowChangeDirectionCounter = function drowChangeDirectionCounter(canvasCtx) {
+var drowChangeDirectionCounter = function drowChangeDirectionCounter() {
   var messageWithCounter = "change direction tries: " + changeDirectionCounter;
-  var textColor = changeDirectionCounter ? 'black' : 'red';
-  canvasCtx.font = '25px Arial';
-  canvasCtx.fillStyle = textColor;
-  canvasCtx.fillText(messageWithCounter, 10, 40);
+  var specificTextColor = !changeDirectionCounter ? 'red' : null;
+  canvasRenderer.drowText(messageWithCounter, {
+    x: 10,
+    y: 40
+  }, specificTextColor);
 };
 
 var tickCounter = -1;
@@ -303,7 +397,7 @@ var tickCounter = -1;
 var validateEnemyCounts = function validateEnemyCounts(angle) {
   tickCounter = tickCounter + 1;
 
-  if (tickCounter >= 120) {
+  if (tickCounter >= 180) {
     tickCounter = 0;
     addEnemy(angle);
   }
@@ -311,12 +405,12 @@ var validateEnemyCounts = function validateEnemyCounts(angle) {
 
 var startGame = function startGame() {
   setInterval(function () {
-    performCleanUp(ctx);
-    setStaticFigures(ctx);
-    performPointerItaration(ctx);
+    canvasRenderer.canvasCleanUp();
+    canvasRenderer.drowStaticGameField();
+    performPointerItaration();
     validateEnemyCounts(angle);
-    updateEnemies(angle, ctx);
-    drowChangeDirectionCounter(ctx);
+    updateEnemies(angle);
+    drowChangeDirectionCounter();
   }, 10);
 };
 
@@ -350,7 +444,6 @@ var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
   var isEnemyInRange = false;
 
   if (enemiesInRange.length) {
-    debugger;
     state.enemies = state.enemies.filter(function (enemy) {
       return !enemiesInRange.some(function (enemyId) {
         return enemyId === enemy.enemyId;
@@ -395,7 +488,7 @@ var addListenerToStartGame = function addListenerToStartGame(listener) {
 
 setDocumentListener(changePointerDirection);
 addListenerToStartGame(startGame);
-},{"../model/game.model":"src/model/game.model.ts","../helpers/radiant-transformer":"src/helpers/radiant-transformer.ts","../helpers/randomizer":"src/helpers/randomizer.ts"}],"index.ts":[function(require,module,exports) {
+},{"../model/game.model":"src/model/game.model.ts","../helpers/radiant-transformer":"src/helpers/radiant-transformer.ts","../helpers/randomizer":"src/helpers/randomizer.ts","./renderer":"src/game/renderer.ts"}],"index.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -431,7 +524,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59439" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "64094" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
