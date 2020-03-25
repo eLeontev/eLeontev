@@ -423,7 +423,7 @@ var updateChangeDirectionCounter = function updateChangeDirectionCounter(diff) {
 };
 
 var reduceChangeDirectionCounterOnLongPending = function reduceChangeDirectionCounterOnLongPending() {
-  if (state.countOfTicksWithoutEnemyDestory > 180) {
+  if (state.countOfTicksWithoutEnemyDestory > 90) {
     cleanUpTicksWithoutEnemyDestroy(true);
     updateChangeDirectionCounter(-1);
   }
