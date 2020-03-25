@@ -297,7 +297,10 @@ var randomizer_1 = require("../helpers/randomizer");
 var renderer_1 = require("./renderer");
 
 var state = {
-  enemies: []
+  enemies: [],
+  tickCounter: 0,
+  countOfTicksWithoutEnemyDestory: 0,
+  changeDirectionCounter: 5
 };
 var clockwise = game_model_1.direction.clockwise,
     сСlockwise = game_model_1.direction.сСlockwise;
@@ -317,7 +320,6 @@ var canvasMiddlePoint = {
 var x = canvasMiddlePoint.x,
     y = canvasMiddlePoint.y;
 var angle = 179;
-var changeDirectionCounter = 5;
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
 var canvasRenderer = new renderer_1.CanvasRenderer(ctx, radius, innerRadius, canvasSize, radiant_transformer_1.getRadians, canvasMiddlePoint);
@@ -384,6 +386,7 @@ var addEnemy = function addEnemy(angle) {
 };
 
 var drowChangeDirectionCounter = function drowChangeDirectionCounter() {
+  var changeDirectionCounter = state.changeDirectionCounter;
   var messageWithCounter = "change direction tries: " + changeDirectionCounter;
   var specificTextColor = !changeDirectionCounter ? 'red' : null;
   canvasRenderer.drowText(messageWithCounter, {
@@ -392,14 +395,37 @@ var drowChangeDirectionCounter = function drowChangeDirectionCounter() {
   }, specificTextColor);
 };
 
-var tickCounter = -1;
-
 var validateEnemyCounts = function validateEnemyCounts(angle) {
-  tickCounter = tickCounter + 1;
+  state.tickCounter = state.tickCounter + 1;
 
-  if (tickCounter >= 180) {
-    tickCounter = 0;
+  if (state.tickCounter >= 180) {
+    state.tickCounter = 0;
     addEnemy(angle);
+  }
+};
+
+var validateTicksWithoutDestroy = function validateTicksWithoutDestroy() {
+  state.countOfTicksWithoutEnemyDestory = state.countOfTicksWithoutEnemyDestory + 1;
+};
+
+var cleanUpTicksWithoutEnemyDestroy = function cleanUpTicksWithoutEnemyDestroy(isEnemyInRange) {
+  if (isEnemyInRange) {
+    state.countOfTicksWithoutEnemyDestory = 0;
+  }
+};
+
+var updateChangeDirectionCounter = function updateChangeDirectionCounter(diff) {
+  state.changeDirectionCounter = state.changeDirectionCounter + diff;
+
+  if (state.changeDirectionCounter < 0) {
+    state.changeDirectionCounter = 0;
+  }
+};
+
+var reduceChangeDirectionCounterOnLongPending = function reduceChangeDirectionCounterOnLongPending() {
+  if (state.countOfTicksWithoutEnemyDestory > 180) {
+    cleanUpTicksWithoutEnemyDestroy(true);
+    updateChangeDirectionCounter(-1);
   }
 };
 
@@ -409,12 +435,15 @@ var startGame = function startGame() {
     canvasRenderer.drowStaticGameField();
     performPointerItaration();
     validateEnemyCounts(angle);
+    validateTicksWithoutDestroy();
+    reduceChangeDirectionCounterOnLongPending();
     updateEnemies(angle);
     drowChangeDirectionCounter();
   }, 10);
 };
 
-var updateChangeDirectionCounter = function updateChangeDirectionCounter(isEnemyInRange) {
+var validateChangeDirectionCounter = function validateChangeDirectionCounter(isEnemyInRange) {
+  var changeDirectionCounter = state.changeDirectionCounter;
   var shouldNotReduceCounter = !isEnemyInRange && changeDirectionCounter === 0;
 
   if (shouldNotReduceCounter) {
@@ -422,7 +451,7 @@ var updateChangeDirectionCounter = function updateChangeDirectionCounter(isEnemy
   }
 
   var diff = isEnemyInRange ? 1 : -1;
-  changeDirectionCounter = changeDirectionCounter + diff;
+  updateChangeDirectionCounter(diff);
 };
 
 var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
@@ -457,12 +486,14 @@ var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
 
 var changePointerDirection = function changePointerDirection() {
   var isEnemyInRange = getUpdatedEnemyStatus();
+  var changeDirectionCounter = state.changeDirectionCounter;
 
   if (changeDirectionCounter || isEnemyInRange) {
     pointerDirection = pointerDirection === clockwise ? сСlockwise : clockwise;
   }
 
-  updateChangeDirectionCounter(isEnemyInRange);
+  cleanUpTicksWithoutEnemyDestroy(isEnemyInRange);
+  validateChangeDirectionCounter(isEnemyInRange);
 };
 
 var isGameStarted = false;
@@ -524,7 +555,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "64094" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "51827" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
