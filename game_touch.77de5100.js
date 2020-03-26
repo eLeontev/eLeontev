@@ -139,15 +139,31 @@ Object.defineProperty(exports, "__esModule", {
 exports.getRadians = function (degrees) {
   return Math.PI / 180 * degrees;
 };
-},{}],"src/helpers/randomizer.ts":[function(require,module,exports) {
+},{}],"src/game/constants.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-exports.randomIntegerInRange = function (min, max) {
-  return Math.floor(min + Math.random() * (max + 1 - min));
+exports.startAnglePosition = 179;
+exports.minimumEnemyOffset = 20;
+exports.maxEnemiesCount = 10;
+exports.maxDelayToAddEnemyInTicks = 150;
+exports.maxDelayInactionsInTicks = 180;
+exports.changeDirectionTriesMessage = 'direction counter:';
+exports.countOfEnemiesMessage = 'count of enemies:';
+exports.loaderWidth = 200;
+exports.loaderHeight = 15;
+exports.verticalLoaderOffset = 7;
+exports.loaderMinColor = '00ff00';
+exports.loaderMaxColor = 'ff0000';
+exports.countOfChangeDirectionTriesMessageCoordintate = {
+  x: 10,
+  y: 85
+};
+exports.countOfEnemiesMessagePositionCoordinate = {
+  x: 10,
+  y: 40
 };
 },{}],"src/game/renderer.ts":[function(require,module,exports) {
 "use strict";
@@ -155,6 +171,8 @@ exports.randomIntegerInRange = function (min, max) {
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+
+var constants_1 = require("./constants");
 
 var CanvasRenderer =
 /** @class */
@@ -230,6 +248,20 @@ function () {
     this.canvasCtx.fillText(messageWithCounter, x, y);
   };
 
+  CanvasRenderer.prototype.drowLoader = function (_a, _b) {
+    var x = _a.x,
+        y = _a.y;
+    var width = _b.width,
+        color = _b.color;
+    var yWithOffset = y + constants_1.verticalLoaderOffset;
+    this.canvasCtx.beginPath();
+    this.canvasCtx.fillStyle = color;
+    this.canvasCtx.fillRect(x, yWithOffset, width, constants_1.loaderHeight);
+    this.canvasCtx.beginPath();
+    this.canvasCtx.strokeStyle = this.defaultStrokeStyleColor;
+    this.canvasCtx.strokeRect(x, yWithOffset, constants_1.loaderWidth, constants_1.loaderHeight);
+  };
+
   CanvasRenderer.prototype.drowStrokedCircle = function (radius, x, y, strokeStyleColor, lineWidth, startAngle, endAngle, lineJoin) {
     if (x === void 0) {
       x = this.middleXCoordinate;
@@ -281,8 +313,300 @@ function () {
 }();
 
 exports.CanvasRenderer = CanvasRenderer;
-},{}],"src/game/index.ts":[function(require,module,exports) {
+},{"./constants":"src/game/constants.ts"}],"src/game/state.ts":[function(require,module,exports) {
 "use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var constants_1 = require("./constants");
+
+exports.state = {
+  enemies: [],
+  tickCounter: 0,
+  countOfTicksWithoutEnemyDestory: 0,
+  changeDirectionCounter: 5,
+  angle: constants_1.startAnglePosition
+};
+},{"./constants":"src/game/constants.ts"}],"node_modules/lodash.uniqueid/index.js":[function(require,module,exports) {
+var global = arguments[3];
+/**
+ * lodash (Custom Build) <https://lodash.com/>
+ * Build: `lodash modularize exports="npm" -o ./`
+ * Copyright jQuery Foundation and other contributors <https://jquery.org/>
+ * Released under MIT license <https://lodash.com/license>
+ * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
+ * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+ */
+
+/** Used as references for various `Number` constants. */
+var INFINITY = 1 / 0;
+
+/** `Object#toString` result references. */
+var symbolTag = '[object Symbol]';
+
+/** Detect free variable `global` from Node.js. */
+var freeGlobal = typeof global == 'object' && global && global.Object === Object && global;
+
+/** Detect free variable `self`. */
+var freeSelf = typeof self == 'object' && self && self.Object === Object && self;
+
+/** Used as a reference to the global object. */
+var root = freeGlobal || freeSelf || Function('return this')();
+
+/** Used for built-in method references. */
+var objectProto = Object.prototype;
+
+/** Used to generate unique IDs. */
+var idCounter = 0;
+
+/**
+ * Used to resolve the
+ * [`toStringTag`](http://ecma-international.org/ecma-262/6.0/#sec-object.prototype.tostring)
+ * of values.
+ */
+var objectToString = objectProto.toString;
+
+/** Built-in value references. */
+var Symbol = root.Symbol;
+
+/** Used to convert symbols to primitives and strings. */
+var symbolProto = Symbol ? Symbol.prototype : undefined,
+    symbolToString = symbolProto ? symbolProto.toString : undefined;
+
+/**
+ * The base implementation of `_.toString` which doesn't convert nullish
+ * values to empty strings.
+ *
+ * @private
+ * @param {*} value The value to process.
+ * @returns {string} Returns the string.
+ */
+function baseToString(value) {
+  // Exit early for strings to avoid a performance hit in some environments.
+  if (typeof value == 'string') {
+    return value;
+  }
+  if (isSymbol(value)) {
+    return symbolToString ? symbolToString.call(value) : '';
+  }
+  var result = (value + '');
+  return (result == '0' && (1 / value) == -INFINITY) ? '-0' : result;
+}
+
+/**
+ * Checks if `value` is object-like. A value is object-like if it's not `null`
+ * and has a `typeof` result of "object".
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is object-like, else `false`.
+ * @example
+ *
+ * _.isObjectLike({});
+ * // => true
+ *
+ * _.isObjectLike([1, 2, 3]);
+ * // => true
+ *
+ * _.isObjectLike(_.noop);
+ * // => false
+ *
+ * _.isObjectLike(null);
+ * // => false
+ */
+function isObjectLike(value) {
+  return !!value && typeof value == 'object';
+}
+
+/**
+ * Checks if `value` is classified as a `Symbol` primitive or object.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to check.
+ * @returns {boolean} Returns `true` if `value` is a symbol, else `false`.
+ * @example
+ *
+ * _.isSymbol(Symbol.iterator);
+ * // => true
+ *
+ * _.isSymbol('abc');
+ * // => false
+ */
+function isSymbol(value) {
+  return typeof value == 'symbol' ||
+    (isObjectLike(value) && objectToString.call(value) == symbolTag);
+}
+
+/**
+ * Converts `value` to a string. An empty string is returned for `null`
+ * and `undefined` values. The sign of `-0` is preserved.
+ *
+ * @static
+ * @memberOf _
+ * @since 4.0.0
+ * @category Lang
+ * @param {*} value The value to process.
+ * @returns {string} Returns the string.
+ * @example
+ *
+ * _.toString(null);
+ * // => ''
+ *
+ * _.toString(-0);
+ * // => '-0'
+ *
+ * _.toString([1, 2, 3]);
+ * // => '1,2,3'
+ */
+function toString(value) {
+  return value == null ? '' : baseToString(value);
+}
+
+/**
+ * Generates a unique ID. If `prefix` is given, the ID is appended to it.
+ *
+ * @static
+ * @since 0.1.0
+ * @memberOf _
+ * @category Util
+ * @param {string} [prefix=''] The value to prefix the ID with.
+ * @returns {string} Returns the unique ID.
+ * @example
+ *
+ * _.uniqueId('contact_');
+ * // => 'contact_104'
+ *
+ * _.uniqueId();
+ * // => '105'
+ */
+function uniqueId(prefix) {
+  var id = ++idCounter;
+  return toString(prefix) + id;
+}
+
+module.exports = uniqueId;
+
+},{}],"src/helpers/randomizer.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+exports.randomIntegerInRange = function (min, max) {
+  return Math.floor(min + Math.random() * (max + 1 - min));
+};
+},{}],"src/game/calculation/enemy.calculation.ts":[function(require,module,exports) {
+"use strict";
+
+var __importDefault = this && this.__importDefault || function (mod) {
+  return mod && mod.__esModule ? mod : {
+    "default": mod
+  };
+};
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var lodash_uniqueid_1 = __importDefault(require("lodash.uniqueid"));
+
+var constants_1 = require("../constants");
+
+var radiant_transformer_1 = require("../../helpers/radiant-transformer");
+
+var randomizer_1 = require("../../helpers/randomizer");
+
+exports.createEnemy = function (angle, innerRadius, radius, middlePointCoordinate) {
+  var minEnemyPosition = Math.abs(angle % 360) + constants_1.minimumEnemyOffset;
+  var maxEnemyPosition = minEnemyPosition + 360 - constants_1.minimumEnemyOffset;
+  var middlePointAngle = randomizer_1.randomIntegerInRange(constants_1.minimumEnemyOffset, maxEnemyPosition) % 360;
+  var distanceFromMiddlePoint = randomizer_1.randomIntegerInRange(innerRadius, radius * 0.9);
+  var enemyRadius = randomizer_1.randomIntegerInRange(innerRadius * 0.1, innerRadius * 0.4);
+  var x = middlePointCoordinate.x,
+      y = middlePointCoordinate.y;
+  var angleRad = radiant_transformer_1.getRadians(middlePointAngle);
+  var xPosition = distanceFromMiddlePoint * Math.sin(angleRad) + x;
+  var yPosition = distanceFromMiddlePoint * Math.cos(angleRad) + y;
+  var angleOffset = Math.atan(enemyRadius / distanceFromMiddlePoint) * 180 / Math.PI;
+  var min = middlePointAngle - angleOffset;
+  var max = middlePointAngle + angleOffset;
+  return {
+    xPosition: xPosition,
+    yPosition: yPosition,
+    enemyRadius: enemyRadius,
+    middlePointAngle: middlePointAngle,
+    enemyAngleRange: [min, max],
+    enemyId: lodash_uniqueid_1.default('enemy-id=')
+  };
+};
+},{"lodash.uniqueid":"node_modules/lodash.uniqueid/index.js","../constants":"src/game/constants.ts","../../helpers/radiant-transformer":"src/helpers/radiant-transformer.ts","../../helpers/randomizer":"src/helpers/randomizer.ts"}],"src/game/calculation/rest-range.calculation.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var constants_1 = require("../constants");
+
+var transformHexToDec = function transformHexToDec(hex) {
+  return parseInt(hex, 16);
+};
+
+var transformDecToHex = function transformDecToHex(dec) {
+  return dec.toString(16);
+};
+
+var colorHexFormat = function colorHexFormat(hex) {
+  return "#" + hex.padStart(6, '0');
+};
+
+var getPositionInPercents = function getPositionInPercents(position, maxPosition) {
+  return position / maxPosition;
+};
+
+var getValueBasedOnPercentsInRange = function getValueBasedOnPercentsInRange(percentage, min, max) {
+  return percentage * (max - min) + min;
+};
+
+var _a = [transformHexToDec(constants_1.loaderMinColor), transformHexToDec(constants_1.loaderMaxColor)],
+    min = _a[0],
+    max = _a[1];
+
+exports.getLoaderDataBasedOnCurrentLoaderCounterPosition = function (_a) {
+  var position = _a.position,
+      maxPosition = _a.maxPosition;
+  var percentagesPosition = getPositionInPercents(position, maxPosition);
+  var decColorPosition = getValueBasedOnPercentsInRange(percentagesPosition, min, max);
+  return {
+    width: percentagesPosition * constants_1.loaderWidth,
+    color: colorHexFormat(transformDecToHex(decColorPosition))
+  };
+};
+},{"../constants":"src/game/constants.ts"}],"src/game/index.ts":[function(require,module,exports) {
+"use strict";
+
+var __spreadArrays = this && this.__spreadArrays || function () {
+  for (var s = 0, i = 0, il = arguments.length; i < il; i++) {
+    s += arguments[i].length;
+  }
+
+  for (var r = Array(s), k = 0, i = 0; i < il; i++) {
+    for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++) {
+      r[k] = a[j];
+    }
+  }
+
+  return r;
+};
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -292,16 +616,16 @@ var game_model_1 = require("../model/game.model");
 
 var radiant_transformer_1 = require("../helpers/radiant-transformer");
 
-var randomizer_1 = require("../helpers/randomizer");
-
 var renderer_1 = require("./renderer");
 
-var state = {
-  enemies: [],
-  tickCounter: 0,
-  countOfTicksWithoutEnemyDestory: 0,
-  changeDirectionCounter: 5
-};
+var state_1 = require("./state");
+
+var enemy_calculation_1 = require("./calculation/enemy.calculation");
+
+var constants_1 = require("./constants");
+
+var rest_range_calculation_1 = require("./calculation/rest-range.calculation");
+
 var clockwise = game_model_1.direction.clockwise,
     сСlockwise = game_model_1.direction.сСlockwise;
 var domRectList = document.body.getClientRects();
@@ -312,14 +636,12 @@ var canvasSize = width > height ? height : width;
 var canvasMiddlePosition = canvasSize / 2;
 var radius = canvasMiddlePosition * 0.9;
 var innerRadius = radius / 3;
-var minimumEnemyOffset = 20;
 var canvasMiddlePoint = {
   x: canvasMiddlePosition,
   y: canvasMiddlePosition
 };
 var x = canvasMiddlePoint.x,
     y = canvasMiddlePoint.y;
-var angle = 179;
 var canvas = document.getElementById('canvas');
 var ctx = canvas.getContext('2d');
 var canvasRenderer = new renderer_1.CanvasRenderer(ctx, radius, innerRadius, canvasSize, radiant_transformer_1.getRadians, canvasMiddlePoint);
@@ -342,88 +664,92 @@ var getUpdatedAngle = function getUpdatedAngle(updatedAngle, direction) {
 };
 
 var performPointerItaration = function performPointerItaration() {
-  drowPointer(angle);
-  angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
+  var angle = state_1.state.angle;
+  drowPointer(state_1.state.angle);
+  state_1.state.angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
 };
 
-var incrementId = -1;
+var hasNoEnemies = function hasNoEnemies(_a) {
+  var enemies = _a.enemies;
+  return !enemies.length;
+};
 
-var calclulateEnemy = function calclulateEnemy(angle) {
-  var minEnemyPosition = Math.abs(angle % 360) + minimumEnemyOffset;
-  var maxEnemyPosition = minEnemyPosition + 360 - minimumEnemyOffset;
-  var middlePointAngle = randomizer_1.randomIntegerInRange(minimumEnemyOffset, maxEnemyPosition) % 360;
-  var distanceFromMiddlePoint = randomizer_1.randomIntegerInRange(innerRadius, radius * 0.9);
-  var enemyRadius = randomizer_1.randomIntegerInRange(innerRadius * 0.1, innerRadius * 0.4);
-  var angleRad = radiant_transformer_1.getRadians(middlePointAngle);
-  var xPosition = distanceFromMiddlePoint * Math.sin(angleRad) + x;
-  var yPosition = distanceFromMiddlePoint * Math.cos(angleRad) + y;
-  var angleOffset = Math.atan(enemyRadius / distanceFromMiddlePoint) * 180 / Math.PI;
-  var min = middlePointAngle - angleOffset;
-  var max = middlePointAngle + angleOffset;
-  incrementId = incrementId + 1;
-  return {
-    xPosition: xPosition,
-    yPosition: yPosition,
-    enemyRadius: enemyRadius,
-    middlePointAngle: middlePointAngle,
-    enemyAngleRange: [min, max],
-    enemyId: incrementId
-  };
+var hasLessEnemiesToMax = function hasLessEnemiesToMax(_a) {
+  var enemies = _a.enemies;
+  return enemies.length < constants_1.maxEnemiesCount;
+};
+
+var isDirectionCounterEmpty = function isDirectionCounterEmpty(_a) {
+  var changeDirectionCounter = _a.changeDirectionCounter;
+  return !changeDirectionCounter;
+};
+
+var addNewEnemy = function addNewEnemy(enemy) {
+  return state_1.state.enemies = __spreadArrays(state_1.state.enemies, [enemy]);
+};
+
+var addNewEnemyWithPassedValidator = function addNewEnemyWithPassedValidator(shouldAddNewEnemyValidator, state, angle) {
+  if (shouldAddNewEnemyValidator(state)) {
+    addNewEnemy(enemy_calculation_1.createEnemy(angle, innerRadius, radius, canvasMiddlePoint));
+  }
 };
 
 var updateEnemies = function updateEnemies(angle) {
-  if (!state.enemies.length) {
-    state.enemies.push(calclulateEnemy(angle));
-  }
-
-  canvasRenderer.drowEnemies(state.enemies);
+  addNewEnemyWithPassedValidator(hasNoEnemies, state_1.state, angle);
+  canvasRenderer.drowEnemies(state_1.state.enemies);
 };
 
 var addEnemy = function addEnemy(angle) {
-  if (state.enemies.length < 10) {
-    state.enemies.push(calclulateEnemy(angle));
-  }
+  addNewEnemyWithPassedValidator(hasLessEnemiesToMax, state_1.state, angle);
 };
 
-var drowChangeDirectionCounter = function drowChangeDirectionCounter() {
-  var changeDirectionCounter = state.changeDirectionCounter;
-  var messageWithCounter = "change direction tries: " + changeDirectionCounter;
-  var specificTextColor = !changeDirectionCounter ? 'red' : null;
-  canvasRenderer.drowText(messageWithCounter, {
-    x: 10,
-    y: 40
-  }, specificTextColor);
+var drowCounterMessageWithLoader = function drowCounterMessageWithLoader(staticPrefixMessage, dynamicValue, useSpecificColor, textPositionCoordintate, loaderPosition) {
+  var messageWithCounter = staticPrefixMessage + " " + dynamicValue;
+  var specificTextColor = useSpecificColor ? 'red' : null;
+  canvasRenderer.drowText(messageWithCounter, textPositionCoordintate, specificTextColor);
+  canvasRenderer.drowLoader(textPositionCoordintate, rest_range_calculation_1.getLoaderDataBasedOnCurrentLoaderCounterPosition(loaderPosition));
+};
+
+var drowTextMessagesWithLoader = function drowTextMessagesWithLoader(state) {
+  drowCounterMessageWithLoader(constants_1.changeDirectionTriesMessage, state.changeDirectionCounter, isDirectionCounterEmpty(state), constants_1.countOfChangeDirectionTriesMessageCoordintate, {
+    position: state.countOfTicksWithoutEnemyDestory,
+    maxPosition: constants_1.maxDelayInactionsInTicks
+  });
+  drowCounterMessageWithLoader(constants_1.countOfEnemiesMessage, state.enemies.length, !hasLessEnemiesToMax(state), constants_1.countOfEnemiesMessagePositionCoordinate, {
+    position: state.tickCounter,
+    maxPosition: constants_1.maxDelayToAddEnemyInTicks
+  });
 };
 
 var validateEnemyCounts = function validateEnemyCounts(angle) {
-  state.tickCounter = state.tickCounter + 1;
+  state_1.state.tickCounter = state_1.state.tickCounter + 1;
 
-  if (state.tickCounter >= 180) {
-    state.tickCounter = 0;
+  if (state_1.state.tickCounter >= constants_1.maxDelayToAddEnemyInTicks) {
+    state_1.state.tickCounter = 0;
     addEnemy(angle);
   }
 };
 
 var validateTicksWithoutDestroy = function validateTicksWithoutDestroy() {
-  state.countOfTicksWithoutEnemyDestory = state.countOfTicksWithoutEnemyDestory + 1;
+  state_1.state.countOfTicksWithoutEnemyDestory = state_1.state.countOfTicksWithoutEnemyDestory + 1;
 };
 
 var cleanUpTicksWithoutEnemyDestroy = function cleanUpTicksWithoutEnemyDestroy(isEnemyInRange) {
   if (isEnemyInRange) {
-    state.countOfTicksWithoutEnemyDestory = 0;
+    state_1.state.countOfTicksWithoutEnemyDestory = 0;
   }
 };
 
 var updateChangeDirectionCounter = function updateChangeDirectionCounter(diff) {
-  state.changeDirectionCounter = state.changeDirectionCounter + diff;
+  state_1.state.changeDirectionCounter = state_1.state.changeDirectionCounter + diff;
 
-  if (state.changeDirectionCounter < 0) {
-    state.changeDirectionCounter = 0;
+  if (state_1.state.changeDirectionCounter < 0) {
+    state_1.state.changeDirectionCounter = 0;
   }
 };
 
 var reduceChangeDirectionCounterOnLongPending = function reduceChangeDirectionCounterOnLongPending() {
-  if (state.countOfTicksWithoutEnemyDestory > 90) {
+  if (state_1.state.countOfTicksWithoutEnemyDestory > constants_1.maxDelayInactionsInTicks) {
     cleanUpTicksWithoutEnemyDestroy(true);
     updateChangeDirectionCounter(-1);
   }
@@ -434,16 +760,16 @@ var startGame = function startGame() {
     canvasRenderer.canvasCleanUp();
     canvasRenderer.drowStaticGameField();
     performPointerItaration();
-    validateEnemyCounts(angle);
+    validateEnemyCounts(state_1.state.angle);
     validateTicksWithoutDestroy();
     reduceChangeDirectionCounterOnLongPending();
-    updateEnemies(angle);
-    drowChangeDirectionCounter();
+    updateEnemies(state_1.state.angle);
+    drowTextMessagesWithLoader(state_1.state);
   }, 10);
 };
 
 var validateChangeDirectionCounter = function validateChangeDirectionCounter(isEnemyInRange) {
-  var changeDirectionCounter = state.changeDirectionCounter;
+  var changeDirectionCounter = state_1.state.changeDirectionCounter;
   var shouldNotReduceCounter = !isEnemyInRange && changeDirectionCounter === 0;
 
   if (shouldNotReduceCounter) {
@@ -455,11 +781,12 @@ var validateChangeDirectionCounter = function validateChangeDirectionCounter(isE
 };
 
 var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
-  if (!state.enemies.length) {
+  if (!state_1.state.enemies.length) {
     return false;
   }
 
-  var enemiesInRange = state.enemies.filter(function (_a) {
+  var angle = state_1.state.angle;
+  var enemiesInRange = state_1.state.enemies.filter(function (_a) {
     var _b = _a.enemyAngleRange,
         min = _b[0],
         max = _b[1];
@@ -473,7 +800,7 @@ var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
   var isEnemyInRange = false;
 
   if (enemiesInRange.length) {
-    state.enemies = state.enemies.filter(function (enemy) {
+    state_1.state.enemies = state_1.state.enemies.filter(function (enemy) {
       return !enemiesInRange.some(function (enemyId) {
         return enemyId === enemy.enemyId;
       });
@@ -486,7 +813,7 @@ var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
 
 var changePointerDirection = function changePointerDirection() {
   var isEnemyInRange = getUpdatedEnemyStatus();
-  var changeDirectionCounter = state.changeDirectionCounter;
+  var changeDirectionCounter = state_1.state.changeDirectionCounter;
 
   if (changeDirectionCounter || isEnemyInRange) {
     pointerDirection = pointerDirection === clockwise ? сСlockwise : clockwise;
@@ -519,7 +846,7 @@ var addListenerToStartGame = function addListenerToStartGame(listener) {
 
 setDocumentListener(changePointerDirection);
 addListenerToStartGame(startGame);
-},{"../model/game.model":"src/model/game.model.ts","../helpers/radiant-transformer":"src/helpers/radiant-transformer.ts","../helpers/randomizer":"src/helpers/randomizer.ts","./renderer":"src/game/renderer.ts"}],"index.ts":[function(require,module,exports) {
+},{"../model/game.model":"src/model/game.model.ts","../helpers/radiant-transformer":"src/helpers/radiant-transformer.ts","./renderer":"src/game/renderer.ts","./state":"src/game/state.ts","./calculation/enemy.calculation":"src/game/calculation/enemy.calculation.ts","./constants":"src/game/constants.ts","./calculation/rest-range.calculation":"src/game/calculation/rest-range.calculation.ts"}],"index.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -555,7 +882,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "51827" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58206" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
