@@ -148,7 +148,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.startAnglePosition = 179;
 exports.minimumEnemyOffset = 20;
 exports.maxEnemiesCount = 10;
-exports.maxDelayToAddEnemyInTicks = 150;
+exports.maxDelayToAddEnemyInTicks = 360;
 exports.maxDelayInactionsInTicks = 180;
 exports.changeDirectionTriesMessage = 'direction counter:';
 exports.countOfEnemiesMessage = 'count of enemies:';
@@ -882,7 +882,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "58206" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "61422" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
