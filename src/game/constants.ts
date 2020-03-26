@@ -4,7 +4,7 @@ export const startAnglePosition = 179;
 export const minimumEnemyOffset = 20;
 export const maxEnemiesCount = 10;
 
-export const maxDelayToAddEnemyInTicks = 150;
+export const maxDelayToAddEnemyInTicks = 360;
 export const maxDelayInactionsInTicks = 180;
 
 export const changeDirectionTriesMessage = 'direction counter:';
