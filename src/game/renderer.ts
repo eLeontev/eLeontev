@@ -1,5 +1,6 @@
-import { Enemy, Coordinate } from '../model/game.model';
+import { Enemy, Coordinate, LoaderData } from '../model/game.model';
 import { GetRadians } from '../helpers/radiant-transformer';
+import { loaderHeight, loaderWidth, verticalLoaderOffset } from './constants';
 
 export class CanvasRenderer {
     private readonly defaultStartAngle: number = 0;
@@ -78,6 +79,18 @@ export class CanvasRenderer {
         this.canvasCtx.font = '25px Arial';
         this.canvasCtx.fillStyle = specificTextColor || this.defaultTextColor;
         this.canvasCtx.fillText(messageWithCounter, x, y);
+    }
+
+    public drowLoader({ x, y }: Coordinate, { width, color }: LoaderData) {
+        const yWithOffset = y + verticalLoaderOffset;
+
+        this.canvasCtx.beginPath();
+        this.canvasCtx.fillStyle = color;
+        this.canvasCtx.fillRect(x, yWithOffset, width, loaderHeight);
+
+        this.canvasCtx.beginPath();
+        this.canvasCtx.strokeStyle = this.defaultStrokeStyleColor;
+        this.canvasCtx.strokeRect(x, yWithOffset, loaderWidth, loaderHeight);
     }
 
     private drowStrokedCircle(

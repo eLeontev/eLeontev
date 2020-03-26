@@ -12,9 +12,11 @@
     "license": "ISC",
     "dependencies": {
         "gh-pages": "^2.2.0",
+        "lodash.uniqueid": "^4.0.1",
         "parcel": "^1.12.4"
     },
     "devDependencies": {
+        "@types/lodash.uniqueid": "^4.0.6",
         "typescript": "^3.8.3"
     }
 }

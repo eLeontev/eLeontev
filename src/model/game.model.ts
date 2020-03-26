@@ -39,3 +39,21 @@ export interface Enemy {
     enemyAngleRange: Array<number>;
     enemyId: number;
 }
+
+export interface State {
+    enemies: Array<Enemy>;
+    tickCounter: number;
+    countOfTicksWithoutEnemyDestory: number;
+    changeDirectionCounter: number;
+    angle: number;
+}
+
+export interface LoaderData {
+    width: number;
+    color: string;
+}
+
+export interface LoaderPostion {
+    position: number;
+    maxPosition: number;
+}

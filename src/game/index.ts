@@ -1,14 +1,18 @@
-import { Coordinate, direction, Enemy } from '../model/game.model';
+import { Coordinate, direction, Enemy, State, LoaderPostion } from '../model/game.model';
 import { getRadians } from '../helpers/radiant-transformer';
-import { randomIntegerInRange } from '../helpers/randomizer';
 import { CanvasRenderer } from './renderer';
-
-const state: any = {
-    enemies: [],
-    tickCounter: 0,
-    countOfTicksWithoutEnemyDestory: 0,
-    changeDirectionCounter: 5
-};
+import { state } from './state';
+import { createEnemy } from './calculation/enemy.calculation';
+import {
+    maxEnemiesCount,
+    maxDelayToAddEnemyInTicks,
+    maxDelayInactionsInTicks,
+    changeDirectionTriesMessage,
+    countOfEnemiesMessage,
+    countOfChangeDirectionTriesMessageCoordintate,
+    countOfEnemiesMessagePositionCoordinate
+} from './constants';
+import { getLoaderDataBasedOnCurrentLoaderCounterPosition } from './calculation/rest-range.calculation';
 
 const { clockwise, сСlockwise } = direction;
 const domRectList = document.body.getClientRects();
@@ -18,7 +22,6 @@ const canvasSize = width > height ? height : width;
 const canvasMiddlePosition = canvasSize / 2;
 const radius = canvasMiddlePosition * 0.9;
 const innerRadius = radius / 3;
-const minimumEnemyOffset = 20;
 
 const canvasMiddlePoint: Coordinate = {
     x: canvasMiddlePosition,
@@ -26,7 +29,6 @@ const canvasMiddlePoint: Coordinate = {
 };
 
 const { x, y } = canvasMiddlePoint;
-let angle = 179;
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -65,67 +67,80 @@ const getUpdatedAngle = (updatedAngle: number, direction: number) => {
 };
 
 const performPointerItaration = () => {
-    drowPointer(angle);
-    angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
+    const { angle } = state;
+    drowPointer(state.angle);
+    state.angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
 };
 
-let incrementId = -1;
+const hasNoEnemies = ({ enemies }: State) => !enemies.length;
+const hasLessEnemiesToMax = ({ enemies }: State) => enemies.length < maxEnemiesCount;
+const isDirectionCounterEmpty = ({ changeDirectionCounter }: State) => !changeDirectionCounter;
 
-const calclulateEnemy = (angle: number): Enemy => {
-    const minEnemyPosition = Math.abs(angle % 360) + minimumEnemyOffset;
-    const maxEnemyPosition = minEnemyPosition + 360 - minimumEnemyOffset;
+const addNewEnemy = (enemy: Enemy) => (state.enemies = [...state.enemies, enemy]);
 
-    const middlePointAngle = randomIntegerInRange(minimumEnemyOffset, maxEnemyPosition) % 360;
-    const distanceFromMiddlePoint = randomIntegerInRange(innerRadius, radius * 0.9);
-    const enemyRadius = randomIntegerInRange(innerRadius * 0.1, innerRadius * 0.4);
-
-    const angleRad = getRadians(middlePointAngle);
-    const xPosition = distanceFromMiddlePoint * Math.sin(angleRad) + x;
-    const yPosition = distanceFromMiddlePoint * Math.cos(angleRad) + y;
-
-    const angleOffset = (Math.atan(enemyRadius / distanceFromMiddlePoint) * 180) / Math.PI;
-
-    const min = middlePointAngle - angleOffset;
-    const max = middlePointAngle + angleOffset;
-
-    incrementId = incrementId + 1;
-
-    return {
-        xPosition,
-        yPosition,
-        enemyRadius,
-        middlePointAngle,
-        enemyAngleRange: [min, max],
-        enemyId: incrementId
-    };
+const addNewEnemyWithPassedValidator = (
+    shouldAddNewEnemyValidator: (state: State) => boolean,
+    state: State,
+    angle: number
+) => {
+    if (shouldAddNewEnemyValidator(state)) {
+        addNewEnemy(createEnemy(angle, innerRadius, radius, canvasMiddlePoint));
+    }
 };
 
 const updateEnemies = (angle: number) => {
-    if (!state.enemies.length) {
-        state.enemies.push(calclulateEnemy(angle));
-    }
-
+    addNewEnemyWithPassedValidator(hasNoEnemies, state, angle);
     canvasRenderer.drowEnemies(state.enemies);
 };
 
 const addEnemy = (angle: number) => {
-    if (state.enemies.length < 10) {
-        state.enemies.push(calclulateEnemy(angle));
-    }
+    addNewEnemyWithPassedValidator(hasLessEnemiesToMax, state, angle);
 };
 
-const drowChangeDirectionCounter = () => {
-    const { changeDirectionCounter } = state;
-    const messageWithCounter = `change direction tries: ${changeDirectionCounter}`;
-    const specificTextColor = !changeDirectionCounter ? 'red' : null;
+const drowCounterMessageWithLoader = (
+    staticPrefixMessage: string,
+    dynamicValue: number,
+    useSpecificColor: boolean,
+    textPositionCoordintate: Coordinate,
+    loaderPosition: LoaderPostion
+) => {
+    const messageWithCounter = `${staticPrefixMessage} ${dynamicValue}`;
+    const specificTextColor = useSpecificColor ? 'red' : null;
 
-    canvasRenderer.drowText(messageWithCounter, { x: 10, y: 40 }, specificTextColor);
+    canvasRenderer.drowText(messageWithCounter, textPositionCoordintate, specificTextColor);
+    canvasRenderer.drowLoader(
+        textPositionCoordintate,
+        getLoaderDataBasedOnCurrentLoaderCounterPosition(loaderPosition)
+    );
+};
+
+const drowTextMessagesWithLoader = (state: State) => {
+    drowCounterMessageWithLoader(
+        changeDirectionTriesMessage,
+        state.changeDirectionCounter,
+        isDirectionCounterEmpty(state),
+        countOfChangeDirectionTriesMessageCoordintate,
+        {
+            position: state.countOfTicksWithoutEnemyDestory,
+            maxPosition: maxDelayInactionsInTicks
+        }
+    );
+    drowCounterMessageWithLoader(
+        countOfEnemiesMessage,
+        state.enemies.length,
+        !hasLessEnemiesToMax(state),
+        countOfEnemiesMessagePositionCoordinate,
+        {
+            position: state.tickCounter,
+            maxPosition: maxDelayToAddEnemyInTicks
+        }
+    );
 };
 
 const validateEnemyCounts = (angle: any) => {
     state.tickCounter = state.tickCounter + 1;
 
-    if (state.tickCounter >= 180) {
+    if (state.tickCounter >= maxDelayToAddEnemyInTicks) {
         state.tickCounter = 0;
         addEnemy(angle);
     }
@@ -150,7 +165,7 @@ const updateChangeDirectionCounter = (diff: number) => {
 };
 
 const reduceChangeDirectionCounterOnLongPending = () => {
-    if (state.countOfTicksWithoutEnemyDestory > 90) {
+    if (state.countOfTicksWithoutEnemyDestory > maxDelayInactionsInTicks) {
         cleanUpTicksWithoutEnemyDestroy(true);
         updateChangeDirectionCounter(-1);
     }
@@ -162,12 +177,12 @@ const startGame = () => {
         canvasRenderer.drowStaticGameField();
         performPointerItaration();
 
-        validateEnemyCounts(angle);
+        validateEnemyCounts(state.angle);
         validateTicksWithoutDestroy();
         reduceChangeDirectionCounterOnLongPending();
 
-        updateEnemies(angle);
-        drowChangeDirectionCounter();
+        updateEnemies(state.angle);
+        drowTextMessagesWithLoader(state);
     }, 10);
 };
 
@@ -188,6 +203,7 @@ const getUpdatedEnemyStatus = () => {
         return false;
     }
 
+    const { angle } = state;
     const enemiesInRange = state.enemies
         .filter(({ enemyAngleRange: [min, max] }: any) => {
             const validatedAngle = angle === 360 ? 0 : angle;
