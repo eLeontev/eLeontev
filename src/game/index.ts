@@ -22,6 +22,7 @@ import {
 } from './constants';
 import { getLoaderDataBasedOnCurrentLoaderCounterPosition } from './calculation/rest-range.calculation';
 import { createEntity } from './calculation/entity.calculation';
+import { performHelperFunctionality } from './calculation/helper-entity.calculation';
 
 const { clockwise, сСlockwise } = direction;
 const domRectList = document.body.getClientRects();
@@ -221,20 +222,21 @@ const getUpdatedEnemyStatus = () => {
     }
 
     const { angle } = state;
-    const enemiesInRange = state.entities
-        .filter(({ enemyAngleRange: [min, max] }: any) => {
-            const validatedAngle = angle === 360 ? 0 : angle;
-            const isEnemyInRange = validatedAngle > min && validatedAngle < max;
+    const enemiesInRange = state.entities.filter(({ enemyAngleRange: [min, max] }: any) => {
+        const validatedAngle = angle === 360 ? 0 : angle;
+        const isEnemyInRange = validatedAngle > min && validatedAngle < max;
 
-            return isEnemyInRange;
-        })
-        .map(({ enemyId }: any) => enemyId);
+        return isEnemyInRange;
+    });
+    const enemiedIfInRange = enemiesInRange.map(({ enemyId }: any) => enemyId);
 
     let isEnemyInRange = false;
 
+    performHelperFunctionality(enemiesInRange, state);
+
     if (enemiesInRange.length) {
         state.entities = state.entities.filter(
-            (enemy: any) => !enemiesInRange.some((enemyId: number) => enemyId === enemy.enemyId)
+            (enemy: any) => !enemiedIfInRange.some((enemyId: number) => enemyId === enemy.enemyId)
         );
 
         isEnemyInRange = true;

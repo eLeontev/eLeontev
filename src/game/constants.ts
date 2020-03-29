@@ -8,7 +8,9 @@ export const maxDelayToAddEnemyInTicks = 360;
 export const maxDelayInactionsInTicks = 180;
 
 export const changeDirectionTriesMessage = 'direction counter:';
-export const countOfEnemiesMessage = 'count of enemies:';
+export const countOfEnemiesMessage = 'count of entities:';
+
+export const changeDirectionCounterIncrement = 4;
 
 export const loaderWidth = 200;
 export const loaderHeight = 15;

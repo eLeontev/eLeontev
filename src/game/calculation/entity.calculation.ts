@@ -9,7 +9,7 @@ export const getRandomHelperProperty = () =>
     Math.random() > 0.5 ? entityProperties.counterIncreaser : entityProperties.exploder;
 
 export const getEntityProperty = (type: entityTypes) => {
-    const isEnemy = entityTypes[type] === entityProperties.enemy;
+    const isEnemy = type === entityTypes.enemy;
     return isEnemy ? entityProperties.enemy : getRandomHelperProperty();
 };
 
