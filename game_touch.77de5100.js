@@ -129,6 +129,21 @@ var direction;
   direction[direction["clockwise"] = -1] = "clockwise";
   direction[direction["\u0441\u0421lockwise"] = 1] = "\u0441\u0421lockwise";
 })(direction = exports.direction || (exports.direction = {}));
+
+var entityTypes;
+
+(function (entityTypes) {
+  entityTypes["enemy"] = "enemy";
+  entityTypes["helper"] = "helper";
+})(entityTypes = exports.entityTypes || (exports.entityTypes = {}));
+
+var entityProperties;
+
+(function (entityProperties) {
+  entityProperties["enemy"] = "enemy";
+  entityProperties["exploder"] = "exploder";
+  entityProperties["counterIncreaser"] = "counterIncreaser";
+})(entityProperties = exports.entityProperties || (exports.entityProperties = {}));
 },{}],"src/helpers/radiant-transformer.ts":[function(require,module,exports) {
 "use strict";
 
@@ -165,14 +180,24 @@ exports.countOfEnemiesMessagePositionCoordinate = {
   x: 10,
   y: 40
 };
+exports.enemyStrokeStyleColor = 'red';
+exports.exploderStrokeStyleColor = 'black';
+exports.counterIncreaserStrokeStyleColor = 'green';
+exports.helperGeneratorChance = 0.1;
 },{}],"src/game/renderer.ts":[function(require,module,exports) {
 "use strict";
+
+var _a;
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
+var game_model_1 = require("../model/game.model");
+
 var constants_1 = require("./constants");
+
+var entityPropertyColors = (_a = {}, _a[game_model_1.entityProperties.enemy] = constants_1.enemyStrokeStyleColor, _a[game_model_1.entityProperties.exploder] = constants_1.exploderStrokeStyleColor, _a[game_model_1.entityProperties.counterIncreaser] = constants_1.counterIncreaserStrokeStyleColor, _a);
 
 var CanvasRenderer =
 /** @class */
@@ -182,13 +207,14 @@ function () {
     this.radius = radius;
     this.innerRadius = innerRadius;
     this.canvasSize = canvasSize;
+    this.entityPropertyColors = entityPropertyColors;
     this.defaultStartAngle = 0;
     this.defaultLineWidth = 1;
     this.pointerLineWidth = 4;
     this.defaultLineJoin = 'round';
     this.defaultStrokeStyleColor = 'black';
     this.cleanUpBackgroundColor = 'white';
-    this.enemyStrokeStyleColor = 'red';
+    this.enemyStrokeStyleColor = constants_1.enemyStrokeStyleColor;
     this.pointerStyleColor = 'blue';
     this.defaultTextColor = 'black';
     this.defaultEndAngle = getRadians(360);
@@ -202,17 +228,17 @@ function () {
   CanvasRenderer.prototype.drowStaticGameField = function () {
     var _this = this;
 
-    [this.innerRadius, this.radius].forEach(function (radius) {
-      return _this.drowStrokedCircle(radius);
+    [this.radius, this.innerRadius].forEach(function (radius) {
+      return _this.drowCircle(radius);
     });
   };
 
-  CanvasRenderer.prototype.drowEnemy = function (radius, x, y, strokeStyleColor) {
+  CanvasRenderer.prototype.drowEntity = function (radius, x, y, strokeStyleColor, fillStyleColor) {
     if (strokeStyleColor === void 0) {
       strokeStyleColor = this.enemyStrokeStyleColor;
     }
 
-    this.drowStrokedCircle(radius, x, y, strokeStyleColor);
+    this.drowCircle(radius, x, y, strokeStyleColor, fillStyleColor);
   };
 
   CanvasRenderer.prototype.canvasCleanUp = function () {
@@ -221,14 +247,15 @@ function () {
     this.canvasCtx.fillRect(0, 0, this.canvasSize, this.canvasSize);
   };
 
-  CanvasRenderer.prototype.drowEnemies = function (enemies) {
+  CanvasRenderer.prototype.drowEntities = function (entities) {
     var _this = this;
 
-    enemies.forEach(function (_a) {
+    entities.forEach(function (_a) {
       var xPosition = _a.xPosition,
           yPosition = _a.yPosition,
-          enemyRadius = _a.enemyRadius;
-      return _this.drowEnemy(enemyRadius, xPosition, yPosition);
+          enemyRadius = _a.enemyRadius,
+          enetityProperty = _a.enetityProperty;
+      return _this.drowEntity(enemyRadius, xPosition, yPosition, _this.entityPropertyColors[enetityProperty], _this.entityPropertyColors[enetityProperty]);
     });
   };
 
@@ -262,7 +289,7 @@ function () {
     this.canvasCtx.strokeRect(x, yWithOffset, constants_1.loaderWidth, constants_1.loaderHeight);
   };
 
-  CanvasRenderer.prototype.drowStrokedCircle = function (radius, x, y, strokeStyleColor, lineWidth, startAngle, endAngle, lineJoin) {
+  CanvasRenderer.prototype.drowCircle = function (radius, x, y, strokeStyleColor, fillStyleColor, lineWidth, startAngle, endAngle, lineJoin) {
     if (x === void 0) {
       x = this.middleXCoordinate;
     }
@@ -292,9 +319,10 @@ function () {
     }
 
     this.canvasCtx.beginPath();
-    this.setPathView(strokeStyleColor, lineWidth, lineJoin);
+    this.setPathView(strokeStyleColor, lineWidth, lineJoin, fillStyleColor);
     this.canvasCtx.arc(x, y, radius, startAngle, endAngle);
     this.canvasCtx.stroke();
+    this.canvasCtx.fill();
   };
 
   CanvasRenderer.prototype.initCanvas = function () {
@@ -303,8 +331,9 @@ function () {
     this.canvasCtx.canvas.style.backgroundColor = this.cleanUpBackgroundColor;
   };
 
-  CanvasRenderer.prototype.setPathView = function (strokeStyleColor, lineWidth, lineJoin) {
-    this.canvasCtx.strokeStyle = strokeStyleColor;
+  CanvasRenderer.prototype.setPathView = function (strokeStyleColor, lineWidth, lineJoin, fillStyleColor) {
+    this.canvasCtx.strokeStyle = fillStyleColor ? this.defaultStrokeStyleColor : strokeStyleColor;
+    this.canvasCtx.fillStyle = fillStyleColor || this.cleanUpBackgroundColor;
     this.canvasCtx.lineWidth = lineWidth;
     this.canvasCtx.lineJoin = lineJoin;
   };
@@ -313,7 +342,7 @@ function () {
 }();
 
 exports.CanvasRenderer = CanvasRenderer;
-},{"./constants":"src/game/constants.ts"}],"src/game/state.ts":[function(require,module,exports) {
+},{"../model/game.model":"src/model/game.model.ts","./constants":"src/game/constants.ts"}],"src/game/state.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -323,13 +352,56 @@ Object.defineProperty(exports, "__esModule", {
 var constants_1 = require("./constants");
 
 exports.state = {
-  enemies: [],
+  entities: [],
   tickCounter: 0,
   countOfTicksWithoutEnemyDestory: 0,
   changeDirectionCounter: 5,
   angle: constants_1.startAnglePosition
 };
-},{"./constants":"src/game/constants.ts"}],"node_modules/lodash.uniqueid/index.js":[function(require,module,exports) {
+},{"./constants":"src/game/constants.ts"}],"src/game/calculation/rest-range.calculation.ts":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var constants_1 = require("../constants");
+
+var transformHexToDec = function transformHexToDec(hex) {
+  return parseInt(hex, 16);
+};
+
+var transformDecToHex = function transformDecToHex(dec) {
+  return dec.toString(16);
+};
+
+var colorHexFormat = function colorHexFormat(hex) {
+  return "#" + hex.padStart(6, '0');
+};
+
+var getPositionInPercents = function getPositionInPercents(position, maxPosition) {
+  return position / maxPosition;
+};
+
+var getValueBasedOnPercentsInRange = function getValueBasedOnPercentsInRange(percentage, min, max) {
+  return percentage * (max - min) + min;
+};
+
+var _a = [transformHexToDec(constants_1.loaderMinColor), transformHexToDec(constants_1.loaderMaxColor)],
+    min = _a[0],
+    max = _a[1];
+
+exports.getLoaderDataBasedOnCurrentLoaderCounterPosition = function (_a) {
+  var position = _a.position,
+      maxPosition = _a.maxPosition;
+  var percentagesPosition = getPositionInPercents(position, maxPosition);
+  var decColorPosition = getValueBasedOnPercentsInRange(percentagesPosition, min, max);
+  return {
+    width: percentagesPosition * constants_1.loaderWidth,
+    color: colorHexFormat(transformDecToHex(decColorPosition))
+  };
+};
+},{"../constants":"src/game/constants.ts"}],"node_modules/lodash.uniqueid/index.js":[function(require,module,exports) {
 var global = arguments[3];
 /**
  * lodash (Custom Build) <https://lodash.com/>
@@ -504,7 +576,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.randomIntegerInRange = function (min, max) {
   return Math.floor(min + Math.random() * (max + 1 - min));
 };
-},{}],"src/game/calculation/enemy.calculation.ts":[function(require,module,exports) {
+},{}],"src/game/calculation/entity.calculation.ts":[function(require,module,exports) {
 "use strict";
 
 var __importDefault = this && this.__importDefault || function (mod) {
@@ -519,13 +591,24 @@ Object.defineProperty(exports, "__esModule", {
 
 var lodash_uniqueid_1 = __importDefault(require("lodash.uniqueid"));
 
+var game_model_1 = require("../../model/game.model");
+
 var constants_1 = require("../constants");
 
 var radiant_transformer_1 = require("../../helpers/radiant-transformer");
 
 var randomizer_1 = require("../../helpers/randomizer");
 
-exports.createEnemy = function (angle, innerRadius, radius, middlePointCoordinate) {
+exports.getRandomHelperProperty = function () {
+  return Math.random() > 0.5 ? game_model_1.entityProperties.counterIncreaser : game_model_1.entityProperties.exploder;
+};
+
+exports.getEntityProperty = function (type) {
+  var isEnemy = game_model_1.entityTypes[type] === game_model_1.entityProperties.enemy;
+  return isEnemy ? game_model_1.entityProperties.enemy : exports.getRandomHelperProperty();
+};
+
+exports.createEntity = function (angle, innerRadius, radius, middlePointCoordinate, type) {
   var minEnemyPosition = Math.abs(angle % 360) + constants_1.minimumEnemyOffset;
   var maxEnemyPosition = minEnemyPosition + 360 - constants_1.minimumEnemyOffset;
   var middlePointAngle = randomizer_1.randomIntegerInRange(constants_1.minimumEnemyOffset, maxEnemyPosition) % 360;
@@ -545,53 +628,12 @@ exports.createEnemy = function (angle, innerRadius, radius, middlePointCoordinat
     enemyRadius: enemyRadius,
     middlePointAngle: middlePointAngle,
     enemyAngleRange: [min, max],
-    enemyId: lodash_uniqueid_1.default('enemy-id=')
+    enemyId: lodash_uniqueid_1.default('enemy-id='),
+    type: type,
+    enetityProperty: exports.getEntityProperty(type)
   };
 };
-},{"lodash.uniqueid":"node_modules/lodash.uniqueid/index.js","../constants":"src/game/constants.ts","../../helpers/radiant-transformer":"src/helpers/radiant-transformer.ts","../../helpers/randomizer":"src/helpers/randomizer.ts"}],"src/game/calculation/rest-range.calculation.ts":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var constants_1 = require("../constants");
-
-var transformHexToDec = function transformHexToDec(hex) {
-  return parseInt(hex, 16);
-};
-
-var transformDecToHex = function transformDecToHex(dec) {
-  return dec.toString(16);
-};
-
-var colorHexFormat = function colorHexFormat(hex) {
-  return "#" + hex.padStart(6, '0');
-};
-
-var getPositionInPercents = function getPositionInPercents(position, maxPosition) {
-  return position / maxPosition;
-};
-
-var getValueBasedOnPercentsInRange = function getValueBasedOnPercentsInRange(percentage, min, max) {
-  return percentage * (max - min) + min;
-};
-
-var _a = [transformHexToDec(constants_1.loaderMinColor), transformHexToDec(constants_1.loaderMaxColor)],
-    min = _a[0],
-    max = _a[1];
-
-exports.getLoaderDataBasedOnCurrentLoaderCounterPosition = function (_a) {
-  var position = _a.position,
-      maxPosition = _a.maxPosition;
-  var percentagesPosition = getPositionInPercents(position, maxPosition);
-  var decColorPosition = getValueBasedOnPercentsInRange(percentagesPosition, min, max);
-  return {
-    width: percentagesPosition * constants_1.loaderWidth,
-    color: colorHexFormat(transformDecToHex(decColorPosition))
-  };
-};
-},{"../constants":"src/game/constants.ts"}],"src/game/index.ts":[function(require,module,exports) {
+},{"lodash.uniqueid":"node_modules/lodash.uniqueid/index.js","../../model/game.model":"src/model/game.model.ts","../constants":"src/game/constants.ts","../../helpers/radiant-transformer":"src/helpers/radiant-transformer.ts","../../helpers/randomizer":"src/helpers/randomizer.ts"}],"src/game/index.ts":[function(require,module,exports) {
 "use strict";
 
 var __spreadArrays = this && this.__spreadArrays || function () {
@@ -620,11 +662,11 @@ var renderer_1 = require("./renderer");
 
 var state_1 = require("./state");
 
-var enemy_calculation_1 = require("./calculation/enemy.calculation");
-
 var constants_1 = require("./constants");
 
 var rest_range_calculation_1 = require("./calculation/rest-range.calculation");
+
+var entity_calculation_1 = require("./calculation/entity.calculation");
 
 var clockwise = game_model_1.direction.clockwise,
     сСlockwise = game_model_1.direction.сСlockwise;
@@ -670,13 +712,16 @@ var performPointerItaration = function performPointerItaration() {
 };
 
 var hasNoEnemies = function hasNoEnemies(_a) {
-  var enemies = _a.enemies;
-  return !enemies.length;
+  var entities = _a.entities;
+  return !entities.find(function (_a) {
+    var type = _a.type;
+    return type === game_model_1.entityTypes.enemy;
+  });
 };
 
 var hasLessEnemiesToMax = function hasLessEnemiesToMax(_a) {
-  var enemies = _a.enemies;
-  return enemies.length < constants_1.maxEnemiesCount;
+  var entities = _a.entities;
+  return entities.length < constants_1.maxEnemiesCount;
 };
 
 var isDirectionCounterEmpty = function isDirectionCounterEmpty(_a) {
@@ -684,23 +729,27 @@ var isDirectionCounterEmpty = function isDirectionCounterEmpty(_a) {
   return !changeDirectionCounter;
 };
 
-var addNewEnemy = function addNewEnemy(enemy) {
-  return state_1.state.enemies = __spreadArrays(state_1.state.enemies, [enemy]);
+var addNewEnemy = function addNewEnemy(entity) {
+  return state_1.state.entities = __spreadArrays(state_1.state.entities, [entity]);
 };
 
-var addNewEnemyWithPassedValidator = function addNewEnemyWithPassedValidator(shouldAddNewEnemyValidator, state, angle) {
+var getRandomEntityType = function getRandomEntityType() {
+  return Math.random() > constants_1.helperGeneratorChance ? game_model_1.entityTypes.enemy : game_model_1.entityTypes.helper;
+};
+
+var addNewEntityWithPassedValidator = function addNewEntityWithPassedValidator(shouldAddNewEnemyValidator, state, angle, type) {
   if (shouldAddNewEnemyValidator(state)) {
-    addNewEnemy(enemy_calculation_1.createEnemy(angle, innerRadius, radius, canvasMiddlePoint));
+    addNewEnemy(entity_calculation_1.createEntity(angle, innerRadius, radius, canvasMiddlePoint, type));
   }
 };
 
-var updateEnemies = function updateEnemies(angle) {
-  addNewEnemyWithPassedValidator(hasNoEnemies, state_1.state, angle);
-  canvasRenderer.drowEnemies(state_1.state.enemies);
+var updateEntities = function updateEntities(angle, type) {
+  addNewEntityWithPassedValidator(hasNoEnemies, state_1.state, angle, type);
+  canvasRenderer.drowEntities(state_1.state.entities);
 };
 
-var addEnemy = function addEnemy(angle) {
-  addNewEnemyWithPassedValidator(hasLessEnemiesToMax, state_1.state, angle);
+var addEntity = function addEntity(angle, type) {
+  addNewEntityWithPassedValidator(hasLessEnemiesToMax, state_1.state, angle, type);
 };
 
 var drowCounterMessageWithLoader = function drowCounterMessageWithLoader(staticPrefixMessage, dynamicValue, useSpecificColor, textPositionCoordintate, loaderPosition) {
@@ -715,18 +764,18 @@ var drowTextMessagesWithLoader = function drowTextMessagesWithLoader(state) {
     position: state.countOfTicksWithoutEnemyDestory,
     maxPosition: constants_1.maxDelayInactionsInTicks
   });
-  drowCounterMessageWithLoader(constants_1.countOfEnemiesMessage, state.enemies.length, !hasLessEnemiesToMax(state), constants_1.countOfEnemiesMessagePositionCoordinate, {
+  drowCounterMessageWithLoader(constants_1.countOfEnemiesMessage, state.entities.length, !hasLessEnemiesToMax(state), constants_1.countOfEnemiesMessagePositionCoordinate, {
     position: state.tickCounter,
     maxPosition: constants_1.maxDelayToAddEnemyInTicks
   });
 };
 
-var validateEnemyCounts = function validateEnemyCounts(angle) {
+var validateEntitiesCounts = function validateEntitiesCounts(angle, getRandomEntityType) {
   state_1.state.tickCounter = state_1.state.tickCounter + 1;
 
   if (state_1.state.tickCounter >= constants_1.maxDelayToAddEnemyInTicks) {
     state_1.state.tickCounter = 0;
-    addEnemy(angle);
+    addEntity(angle, getRandomEntityType());
   }
 };
 
@@ -759,11 +808,11 @@ var startGame = function startGame() {
   setInterval(function () {
     canvasRenderer.canvasCleanUp();
     canvasRenderer.drowStaticGameField();
-    performPointerItaration();
-    validateEnemyCounts(state_1.state.angle);
+    validateEntitiesCounts(state_1.state.angle, getRandomEntityType);
     validateTicksWithoutDestroy();
     reduceChangeDirectionCounterOnLongPending();
-    updateEnemies(state_1.state.angle);
+    updateEntities(state_1.state.angle, game_model_1.entityTypes.enemy);
+    performPointerItaration();
     drowTextMessagesWithLoader(state_1.state);
   }, 10);
 };
@@ -781,12 +830,12 @@ var validateChangeDirectionCounter = function validateChangeDirectionCounter(isE
 };
 
 var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
-  if (!state_1.state.enemies.length) {
+  if (!state_1.state.entities.length) {
     return false;
   }
 
   var angle = state_1.state.angle;
-  var enemiesInRange = state_1.state.enemies.filter(function (_a) {
+  var enemiesInRange = state_1.state.entities.filter(function (_a) {
     var _b = _a.enemyAngleRange,
         min = _b[0],
         max = _b[1];
@@ -800,7 +849,7 @@ var getUpdatedEnemyStatus = function getUpdatedEnemyStatus() {
   var isEnemyInRange = false;
 
   if (enemiesInRange.length) {
-    state_1.state.enemies = state_1.state.enemies.filter(function (enemy) {
+    state_1.state.entities = state_1.state.entities.filter(function (enemy) {
       return !enemiesInRange.some(function (enemyId) {
         return enemyId === enemy.enemyId;
       });
@@ -846,7 +895,7 @@ var addListenerToStartGame = function addListenerToStartGame(listener) {
 
 setDocumentListener(changePointerDirection);
 addListenerToStartGame(startGame);
-},{"../model/game.model":"src/model/game.model.ts","../helpers/radiant-transformer":"src/helpers/radiant-transformer.ts","./renderer":"src/game/renderer.ts","./state":"src/game/state.ts","./calculation/enemy.calculation":"src/game/calculation/enemy.calculation.ts","./constants":"src/game/constants.ts","./calculation/rest-range.calculation":"src/game/calculation/rest-range.calculation.ts"}],"index.ts":[function(require,module,exports) {
+},{"../model/game.model":"src/model/game.model.ts","../helpers/radiant-transformer":"src/helpers/radiant-transformer.ts","./renderer":"src/game/renderer.ts","./state":"src/game/state.ts","./constants":"src/game/constants.ts","./calculation/rest-range.calculation":"src/game/calculation/rest-range.calculation.ts","./calculation/entity.calculation":"src/game/calculation/entity.calculation.ts"}],"index.ts":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -882,7 +931,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "61422" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "63764" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
