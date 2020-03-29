@@ -1,8 +1,26 @@
-import { Enemy, Coordinate, LoaderData } from '../model/game.model';
+import { Entity, Coordinate, LoaderData, entityProperties } from '../model/game.model';
 import { GetRadians } from '../helpers/radiant-transformer';
-import { loaderHeight, loaderWidth, verticalLoaderOffset } from './constants';
+import {
+    loaderHeight,
+    loaderWidth,
+    verticalLoaderOffset,
+    enemyStrokeStyleColor,
+    exploderStrokeStyleColor,
+    counterIncreaserStrokeStyleColor
+} from './constants';
+
+type EntityPropertyColors = {
+    [type in entityProperties]: string;
+};
+const entityPropertyColors: EntityPropertyColors = {
+    [entityProperties.enemy]: enemyStrokeStyleColor,
+    [entityProperties.exploder]: exploderStrokeStyleColor,
+    [entityProperties.counterIncreaser]: counterIncreaserStrokeStyleColor
+};
 
 export class CanvasRenderer {
+    private readonly entityPropertyColors: EntityPropertyColors = entityPropertyColors;
+
     private readonly defaultStartAngle: number = 0;
     private readonly defaultEndAngle: number;
 
@@ -15,7 +33,7 @@ export class CanvasRenderer {
 
     private readonly defaultStrokeStyleColor: string = 'black';
     private cleanUpBackgroundColor: string = 'white';
-    private enemyStrokeStyleColor: string = 'red';
+    private enemyStrokeStyleColor: string = enemyStrokeStyleColor;
     private pointerStyleColor: string = 'blue';
     private defaultTextColor: string = 'black';
 
@@ -37,16 +55,17 @@ export class CanvasRenderer {
     }
 
     public drowStaticGameField() {
-        [this.innerRadius, this.radius].forEach((radius: number) => this.drowStrokedCircle(radius));
+        [this.radius, this.innerRadius].forEach((radius: number) => this.drowCircle(radius));
     }
 
-    public drowEnemy(
+    public drowEntity(
         radius: number,
         x: number,
         y: number,
-        strokeStyleColor: string = this.enemyStrokeStyleColor
+        strokeStyleColor: string = this.enemyStrokeStyleColor,
+        fillStyleColor?: string
     ) {
-        this.drowStrokedCircle(radius, x, y, strokeStyleColor);
+        this.drowCircle(radius, x, y, strokeStyleColor, fillStyleColor);
     }
 
     public canvasCleanUp() {
@@ -55,9 +74,15 @@ export class CanvasRenderer {
         this.canvasCtx.fillRect(0, 0, this.canvasSize, this.canvasSize);
     }
 
-    public drowEnemies(enemies: Enemy[]) {
-        enemies.forEach(({ xPosition, yPosition, enemyRadius }: Enemy) =>
-            this.drowEnemy(enemyRadius, xPosition, yPosition)
+    public drowEntities(entities: Entity[]) {
+        entities.forEach(({ xPosition, yPosition, enemyRadius, enetityProperty }: Entity) =>
+            this.drowEntity(
+                enemyRadius,
+                xPosition,
+                yPosition,
+                this.entityPropertyColors[enetityProperty],
+                this.entityPropertyColors[enetityProperty]
+            )
         );
     }
 
@@ -93,21 +118,23 @@ export class CanvasRenderer {
         this.canvasCtx.strokeRect(x, yWithOffset, loaderWidth, loaderHeight);
     }
 
-    private drowStrokedCircle(
+    private drowCircle(
         radius: number,
         x: number = this.middleXCoordinate,
         y: number = this.middleYCoordinate,
         strokeStyleColor: string = this.defaultStrokeStyleColor,
+        fillStyleColor?: string,
         lineWidth: number = this.defaultLineWidth,
         startAngle: number = this.defaultStartAngle,
         endAngle: number = this.defaultEndAngle,
         lineJoin: CanvasLineJoin = this.defaultLineJoin
     ) {
         this.canvasCtx.beginPath();
-        this.setPathView(strokeStyleColor, lineWidth, lineJoin);
+        this.setPathView(strokeStyleColor, lineWidth, lineJoin, fillStyleColor);
 
         this.canvasCtx.arc(x, y, radius, startAngle, endAngle);
         this.canvasCtx.stroke();
+        this.canvasCtx.fill();
     }
 
     private initCanvas() {
@@ -116,8 +143,16 @@ export class CanvasRenderer {
         this.canvasCtx.canvas.style.backgroundColor = this.cleanUpBackgroundColor;
     }
 
-    private setPathView(strokeStyleColor: string, lineWidth: number, lineJoin: CanvasLineJoin) {
-        this.canvasCtx.strokeStyle = strokeStyleColor;
+    private setPathView(
+        strokeStyleColor: string,
+        lineWidth: number,
+        lineJoin: CanvasLineJoin,
+        fillStyleColor?: string
+    ) {
+        this.canvasCtx.strokeStyle = fillStyleColor
+            ? this.defaultStrokeStyleColor
+            : strokeStyleColor;
+        this.canvasCtx.fillStyle = fillStyleColor || this.cleanUpBackgroundColor;
         this.canvasCtx.lineWidth = lineWidth;
         this.canvasCtx.lineJoin = lineJoin;
     }

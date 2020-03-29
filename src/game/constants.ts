@@ -25,3 +25,9 @@ export const countOfEnemiesMessagePositionCoordinate: Coordinate = {
     x: 10,
     y: 40
 };
+
+export const enemyStrokeStyleColor = 'red';
+export const exploderStrokeStyleColor = 'black';
+export const counterIncreaserStrokeStyleColor = 'green';
+
+export const helperGeneratorChance = 0.1;

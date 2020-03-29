@@ -1,8 +1,15 @@
-import { Coordinate, direction, Enemy, State, LoaderPostion } from '../model/game.model';
+import {
+    Coordinate,
+    direction,
+    Entity,
+    State,
+    LoaderPostion,
+    entityTypes
+} from '../model/game.model';
 import { getRadians } from '../helpers/radiant-transformer';
 import { CanvasRenderer } from './renderer';
 import { state } from './state';
-import { createEnemy } from './calculation/enemy.calculation';
+
 import {
     maxEnemiesCount,
     maxDelayToAddEnemyInTicks,
@@ -10,9 +17,11 @@ import {
     changeDirectionTriesMessage,
     countOfEnemiesMessage,
     countOfChangeDirectionTriesMessageCoordintate,
-    countOfEnemiesMessagePositionCoordinate
+    countOfEnemiesMessagePositionCoordinate,
+    helperGeneratorChance
 } from './constants';
 import { getLoaderDataBasedOnCurrentLoaderCounterPosition } from './calculation/rest-range.calculation';
+import { createEntity } from './calculation/entity.calculation';
 
 const { clockwise, сСlockwise } = direction;
 const domRectList = document.body.getClientRects();
@@ -72,29 +81,35 @@ const performPointerItaration = () => {
     state.angle = getUpdatedAngle(angle + pointerDirection, pointerDirection);
 };
 
-const hasNoEnemies = ({ enemies }: State) => !enemies.length;
-const hasLessEnemiesToMax = ({ enemies }: State) => enemies.length < maxEnemiesCount;
+const hasNoEnemies = ({ entities }: State) =>
+    !entities.find(({ type }: Entity) => type === entityTypes.enemy);
+const hasLessEnemiesToMax = ({ entities }: State) => entities.length < maxEnemiesCount;
 const isDirectionCounterEmpty = ({ changeDirectionCounter }: State) => !changeDirectionCounter;
 
-const addNewEnemy = (enemy: Enemy) => (state.enemies = [...state.enemies, enemy]);
+const addNewEnemy = (entity: Entity) => (state.entities = [...state.entities, entity]);
 
-const addNewEnemyWithPassedValidator = (
+type GetRandomEntityType = () => entityTypes;
+const getRandomEntityType: GetRandomEntityType = () =>
+    Math.random() > helperGeneratorChance ? entityTypes.enemy : entityTypes.helper;
+
+const addNewEntityWithPassedValidator = (
     shouldAddNewEnemyValidator: (state: State) => boolean,
     state: State,
-    angle: number
+    angle: number,
+    type: entityTypes
 ) => {
     if (shouldAddNewEnemyValidator(state)) {
-        addNewEnemy(createEnemy(angle, innerRadius, radius, canvasMiddlePoint));
+        addNewEnemy(createEntity(angle, innerRadius, radius, canvasMiddlePoint, type));
     }
 };
 
-const updateEnemies = (angle: number) => {
-    addNewEnemyWithPassedValidator(hasNoEnemies, state, angle);
-    canvasRenderer.drowEnemies(state.enemies);
+const updateEntities = (angle: number, type: entityTypes) => {
+    addNewEntityWithPassedValidator(hasNoEnemies, state, angle, type);
+    canvasRenderer.drowEntities(state.entities);
 };
 
-const addEnemy = (angle: number) => {
-    addNewEnemyWithPassedValidator(hasLessEnemiesToMax, state, angle);
+const addEntity = (angle: number, type: entityTypes) => {
+    addNewEntityWithPassedValidator(hasLessEnemiesToMax, state, angle, type);
 };
 
 const drowCounterMessageWithLoader = (
@@ -127,7 +142,7 @@ const drowTextMessagesWithLoader = (state: State) => {
     );
     drowCounterMessageWithLoader(
         countOfEnemiesMessage,
-        state.enemies.length,
+        state.entities.length,
         !hasLessEnemiesToMax(state),
         countOfEnemiesMessagePositionCoordinate,
         {
@@ -137,12 +152,12 @@ const drowTextMessagesWithLoader = (state: State) => {
     );
 };
 
-const validateEnemyCounts = (angle: any) => {
+const validateEntitiesCounts = (angle: any, getRandomEntityType: GetRandomEntityType) => {
     state.tickCounter = state.tickCounter + 1;
 
     if (state.tickCounter >= maxDelayToAddEnemyInTicks) {
         state.tickCounter = 0;
-        addEnemy(angle);
+        addEntity(angle, getRandomEntityType());
     }
 };
 
@@ -175,13 +190,15 @@ const startGame = () => {
     setInterval(() => {
         canvasRenderer.canvasCleanUp();
         canvasRenderer.drowStaticGameField();
-        performPointerItaration();
 
-        validateEnemyCounts(state.angle);
+        validateEntitiesCounts(state.angle, getRandomEntityType);
         validateTicksWithoutDestroy();
         reduceChangeDirectionCounterOnLongPending();
 
-        updateEnemies(state.angle);
+        updateEntities(state.angle, entityTypes.enemy);
+
+        performPointerItaration();
+
         drowTextMessagesWithLoader(state);
     }, 10);
 };
@@ -199,12 +216,12 @@ const validateChangeDirectionCounter = (isEnemyInRange: boolean) => {
 };
 
 const getUpdatedEnemyStatus = () => {
-    if (!state.enemies.length) {
+    if (!state.entities.length) {
         return false;
     }
 
     const { angle } = state;
-    const enemiesInRange = state.enemies
+    const enemiesInRange = state.entities
         .filter(({ enemyAngleRange: [min, max] }: any) => {
             const validatedAngle = angle === 360 ? 0 : angle;
             const isEnemyInRange = validatedAngle > min && validatedAngle < max;
@@ -216,7 +233,7 @@ const getUpdatedEnemyStatus = () => {
     let isEnemyInRange = false;
 
     if (enemiesInRange.length) {
-        state.enemies = state.enemies.filter(
+        state.entities = state.entities.filter(
             (enemy: any) => !enemiesInRange.some((enemyId: number) => enemyId === enemy.enemyId)
         );
 

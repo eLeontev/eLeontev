@@ -31,7 +31,20 @@ export interface Switcher {
     offsets: number;
 }
 
-export interface Enemy {
+export enum entityTypes {
+    enemy = 'enemy',
+    helper = 'helper'
+}
+
+export enum entityProperties {
+    enemy = 'enemy',
+    exploder = 'exploder',
+    counterIncreaser = 'counterIncreaser'
+}
+
+export interface Entity {
+    type: entityTypes;
+    enetityProperty: entityProperties;
     xPosition: number;
     yPosition: number;
     enemyRadius: number;
@@ -41,7 +54,7 @@ export interface Enemy {
 }
 
 export interface State {
-    enemies: Array<Enemy>;
+    entities: Array<Entity>;
     tickCounter: number;
     countOfTicksWithoutEnemyDestory: number;
     changeDirectionCounter: number;

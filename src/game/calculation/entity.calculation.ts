@@ -1,16 +1,25 @@
 import uniqueId from 'lodash.uniqueid';
 
-import { Enemy, Coordinate } from '../../model/game.model';
+import { Entity, Coordinate, entityTypes, entityProperties } from '../../model/game.model';
 import { minimumEnemyOffset } from '../constants';
 import { getRadians } from '../../helpers/radiant-transformer';
 import { randomIntegerInRange } from '../../helpers/randomizer';
 
-export const createEnemy = (
+export const getRandomHelperProperty = () =>
+    Math.random() > 0.5 ? entityProperties.counterIncreaser : entityProperties.exploder;
+
+export const getEntityProperty = (type: entityTypes) => {
+    const isEnemy = entityTypes[type] === entityProperties.enemy;
+    return isEnemy ? entityProperties.enemy : getRandomHelperProperty();
+};
+
+export const createEntity = (
     angle: number,
     innerRadius: number,
     radius: number,
-    middlePointCoordinate: Coordinate
-): Enemy => {
+    middlePointCoordinate: Coordinate,
+    type: entityTypes
+): Entity => {
     const minEnemyPosition = Math.abs(angle % 360) + minimumEnemyOffset;
     const maxEnemyPosition = minEnemyPosition + 360 - minimumEnemyOffset;
 
@@ -34,6 +43,8 @@ export const createEnemy = (
         enemyRadius,
         middlePointAngle,
         enemyAngleRange: [min, max],
-        enemyId: uniqueId('enemy-id=')
+        enemyId: uniqueId('enemy-id='),
+        type,
+        enetityProperty: getEntityProperty(type)
     };
 };
